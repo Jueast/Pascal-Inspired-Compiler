@@ -1,10 +1,10 @@
 CC=gcc
 CFLAGS=-g -Wall
-SOURCES=main.c input.c
+SOURCES=main.c input.c lexan.c
 OBJECTS=$(SOURCES:.cpp=.o)
-MAIN=test
+MAIN= ps
 
-.PHONY: clean 
+.PHONY: lexan clean 
 all: $(MAIN)
 	@echo Simple compiler has been compiled
 $(MAIN): $(OBJECTS)
@@ -16,8 +16,9 @@ $(MAIN): $(OBJECTS)
 clean:
 	rm *.o *~ $(MAIN)
 	echo Clean Done!
-
-
+lexan: $(OBJECTS)
+	$(CC) $(CFLAGS) -o lexan $(OBJECTS)
+	
 	
 # DO NOT DELETE
 

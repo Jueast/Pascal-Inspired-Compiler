@@ -11,7 +11,7 @@
  * statically defined array of symbol to store individual lines
  */
 char  line[MAX_LINE_LENGTH];
-int   lineNumber = 0;
+int lineNumber = 0;
 char *linePointer = line;
 FILE *inputFile;
 int extendedLine = 0;

@@ -1,20 +1,43 @@
+/* main.c */
+/* lexical analyzer test */
+
+#include "lexan.h"
 #include <stdio.h>
-#include "input.h"
+
+void printSymb(LexicalSymbol lexSymbol) {
+    printf("<%s", symbTable[lexSymbol.type]);
+    switch (lexSymbol.type) {
+    case IDENT:
+        printf(", %s", lexSymbol.ident);
+        break;
+    case INTEGER:
+        printf(", %d", lexSymbol.value);
+        break;
+    default:
+        break;
+    }
+    printf(">\n");
+}
+
 int main(int argc, char *argv[]) {
     char *fileName;
-    char c;
+    printf("Lexical analyzer test.\n");
     if (argc == 1) {
-        printf("Input from keyboard, write the source code terminated by a dot.\n");
-    fileName = NULL;} 
+        printf("Keyboard input, write the source code.\n");
+        fileName = NULL;} 
     else {
         fileName = argv[1];
         printf("Input file %s.\n", fileName);
     }
-    initInput(fileName);
-    while((c = getChar()) != '\0'){
-        putchar(c);
+    if(!initLexan(fileName)) {
+        printf("Error creating lexical analyzer.\n");
+        return 0;
     }
-    printf("End.\n");
+    LexicalSymbol lexSymbol;
+    do {
+        lexSymbol = readLexem();
+        printSymb(lexSymbol);} 
+    while (lexSymbol.type != EOI);
+        printf("End.\n");
     return 0;
 }
-
