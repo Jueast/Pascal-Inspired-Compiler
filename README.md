@@ -16,7 +16,7 @@ Comments begin with `{`, and end with `}`.
     TIMES           \*
     DIVIDE          \\
     EQ              =
-    NEQ             \<>
+    NEQ             <>
     LT              <
     GT              >
     LTE             <=

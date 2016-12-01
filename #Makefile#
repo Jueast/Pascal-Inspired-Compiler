@@ -1,4 +1,4 @@
-CC=g++
+OBCC=g++
 CFLAGS=-g -Wall
 SOURCES=main.cpp input.cpp lexan.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
@@ -16,9 +16,12 @@ $(MAIN): $(OBJECTS)
 clean:
 	rm *.o *~ $(MAIN)
 	echo Clean Done!
-
 lexan: $(OBJECTS)
 	$(CC) $(CFLAGS) -o lexan $(OBJECTS)
-	rm *.o
 	
+	
+# DO NOT DELETE
 
+main.o: /usr/include/stdio.h /usr/include/features.h
+main.o: /usr/include/stdc-predef.h /usr/include/libio.h
+main.o: /usr/include/_G_config.h /usr/include/wchar.h ./lib/input.h
