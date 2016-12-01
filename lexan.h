@@ -2,7 +2,9 @@
 /**
  * Lexical elements that are recognised by Lexical analy
  */
- typedef enum {
+#include "types.h"
+#include <string>
+typedef enum {
     IDENT, INTEGER, PLUS, MINUS, TIMES, DIVIDE,
     EQ, NEQ, LT, GT, LTE, GTE, LPAR, RPAR, LBRA, RBRA, ASSIGN,
     COMMA, SEMICOLON, COLON, DOT,
@@ -19,8 +21,8 @@ extern const char *symbTable[40];
 
 typedef struct LexicalSymbol {
   LexSymbolType type;
-  char      ident[MAX_IDENT_LEN];  /* atribute of IDENT token */
-  int       value;                 /* atribute of INTEGER token */
+  std::string      ident;  /* atribute of IDENT token */
+  INT       value;                 /* atribute of INTEGER token */
 } LexicalSymbol;
 
 LexicalSymbol readLexem(void);

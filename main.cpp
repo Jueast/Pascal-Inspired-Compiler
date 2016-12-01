@@ -8,7 +8,7 @@ void printSymb(LexicalSymbol lexSymbol) {
     printf("<%s", symbTable[lexSymbol.type]);
     switch (lexSymbol.type) {
     case IDENT:
-        printf(", %s", lexSymbol.ident);
+        printf(", %s", lexSymbol.ident.c_str());
         break;
     case INTEGER:
         printf(", %d", lexSymbol.value);

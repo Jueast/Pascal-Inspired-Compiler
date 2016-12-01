@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-g -Wall
+CPPFLAGS=-g -Wall -std=c++11
 SOURCES=main.cpp input.cpp lexan.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 MAIN= ps
@@ -8,17 +8,17 @@ MAIN= ps
 all: $(MAIN)
 	@echo Simple compiler has been compiled
 $(MAIN): $(OBJECTS)
-	$(CC) $(CFLAGS) -o $(MAIN) $(OBJECTS)
+	$(CC) $(CPPFLAGS) -o $(MAIN) $(OBJECTS)
     
 .c.o:
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CPPFLAGS) $< -o $@
 
 clean:
 	rm *.o *~ $(MAIN)
 	echo Clean Done!
 
 lexan: $(OBJECTS)
-	$(CC) $(CFLAGS) -o lexan $(OBJECTS)
+	$(CC) $(CPPFLAGS) -o lexan $(OBJECTS)
 	rm *.o
 	
 

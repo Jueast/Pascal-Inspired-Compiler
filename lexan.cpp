@@ -4,7 +4,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
-
 typedef enum {
     LETTER, DIGIT, WHITE_SPACE, ENDFILE,UNDERLINE, NO_TYPE
 }InputCharType;
@@ -40,7 +39,7 @@ void covertToUpper(char* str){
         *str = toupper(*str);
     }
 }
-const struct {char* s; LexSymbolType symb;} keyWordTable[] = {
+const struct {const char* s; LexSymbolType symb;} keyWordTable[] = {
     {"PROGRAM", kwPROGRAM},
     {"CONST", kwCONST},
     {"VAR", kwVAR},
@@ -57,7 +56,7 @@ const struct {char* s; LexSymbolType symb;} keyWordTable[] = {
     {"WRITELN", kwWRITELN},
     {NULL, (LexSymbolType) 0}
 };
-LexSymbolType keyWord(char* id) {
+LexSymbolType keyWord(const char* id) {
     int i = 0;
     char upperid[MAX_IDENT_LEN];
     strcpy(upperid, id);
@@ -70,13 +69,12 @@ LexSymbolType keyWord(char* id) {
     }
     return IDENT;
 }
-void lexicalError(char* text) {
+void lexicalError(const char* text) {
     printf("\nLexical Analysis in line %d : %s\n", lineNumber, text);
     exit(1);
 }
 LexicalSymbol readLexem(void) {
     LexicalSymbol data;
-    int identLen;
 start:
     switch(character) {
         case '{':
@@ -149,8 +147,7 @@ start:
             data.type = EOI;
             return data;
         case LETTER:
-            identLen = 1;
-            data.ident[0] = character;
+            data.ident += character;
             readInput();
             goto letter;
         case DIGIT:
@@ -219,13 +216,11 @@ letter:
     case LETTER:
     case DIGIT:
     case UNDERLINE:
-        data.ident[identLen] = character;
-        identLen++;
+        data.ident += character;
         readInput();
         goto letter;
     default:
-        data.ident[identLen] = '\0';
-        data.type = keyWord(data.ident);
+        data.type = keyWord(data.ident.c_str());
         return data;
     }
 digit:
