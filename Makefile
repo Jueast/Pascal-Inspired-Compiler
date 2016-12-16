@@ -1,5 +1,5 @@
 CC=g++
-CPPFLAGS=-g -Wall -std=c++11
+CPPFLAGS=-g -Wall -std=c++11 -D LOCAL_SFE_TEST
 LEXAN_SOURCES=main_lexan.cpp input.cpp lexan.cpp
 PARSER_SOURCES=main_parser.cpp input.cpp lexan.cpp ast.cpp parser.cpp
 LEXAN_OBJECTS=$(LEXAN_SOURCES:.cpp=.o)
