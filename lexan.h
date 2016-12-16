@@ -10,7 +10,7 @@ typedef enum {
     kwPROGRAM, kwFUNCTION, kwVAR, kwCONST, kwBEGIN, kwEND,
     kwINTEGER,
     kwIF, kwTHEN, kwELSE,
-    kwWHILE, kwDO, kwWRITELN, kwREADLN,
+    kwWHILE, kwDO, kwWRITE, kwREAD,
     EOI, ERR
  } LexSymbolType;
 

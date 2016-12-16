@@ -14,7 +14,7 @@ const char *symbTable[40] = {
     "RPAR","LBRA","RBRA","ASSIGN","COMMA","SEMICOLON",
     "COLON","DOT","kwPROGRAM","kwFUNCTION","kwVAR","kwCONST",
     "kwBEGIN","kwEND","kwINTEGER","kwIF","kwTHEN","kwELSE",
-    "kwWHILE","kwDO","kwWRITELN","kwREADLN","EOI","ERR"
+    "kwWHILE","kwDO","kwWRITE","kwREAD","EOI","ERR"
 };
 static int character; // input symbol
 static InputCharType input; // input symbol type
@@ -52,8 +52,8 @@ const struct {const char* s; LexSymbolType symb;} keyWordTable[] = {
     {"ELSE",kwELSE},
     {"WHILE",kwWHILE},
     {"DO", kwDO},
-    {"READLN", kwREADLN},
-    {"WRITELN", kwWRITELN},
+    {"READ", kwREAD},
+    {"WRITE", kwWRITE},
     {NULL, (LexSymbolType) 0}
 };
 LexSymbolType keyWord(const char* id) {
