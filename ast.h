@@ -1,5 +1,5 @@
 #ifndef LOCAL_SFE_TEST
-#include "llvm.h"
+#include "llvmlib.h"
 #endif
 #include <vector>
 #ifndef _NODE_
@@ -28,7 +28,7 @@ public:
     IntConst(int c) : val(c) {};
     virtual void Translate();
 #ifndef LOCAL_SFE_TEST
-    virtual llvm::Value* codegen() = 0;
+    virtual llvm::Value* codegen();
 #endif
     int Val();
 };
@@ -41,7 +41,7 @@ public:
     virtual ~BinOp();
   //  virtual Node *Optimize(){};
 #ifndef LOCAL_SFE_TEST
-    virtual llvm::Value* codegen() = 0;
+    virtual llvm::Value* codegen();
 #endif
     virtual void Translate();
 };
@@ -53,7 +53,7 @@ public:
     ~UnMinus();
    // Node *Optimize(){};
 #ifndef LOCAL_SFE_TEST
-    virtual llvm::Value* codegen() = 0;
+    virtual llvm::Value* codegen();
 #endif
     void Translate();
 };
