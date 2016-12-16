@@ -1,4 +1,3 @@
 #include "ast.h"
-
-Node Expression(void);
+StatmList* Program();
 int initParser(char*);

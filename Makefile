@@ -1,10 +1,12 @@
 CC=g++
 CPPFLAGS=-g -Wall -std=c++11
-SOURCES=main.cpp input.cpp lexan.cpp
-OBJECTS=$(SOURCES:.cpp=.o)
+LEXAN_SOURCES=main_lexan.cpp input.cpp lexan.cpp
+PARSER_SOURCES=main_parser.cpp input.cpp lexan.cpp ast.cpp parser.cpp
+LEXAN_OBJECTS=$(LEXAN_SOURCES:.cpp=.o)
+PARSER_OBJECTS=$(PARSER_SOURCES:.cpp=.o)
 MAIN= ps
 
-.PHONY: lexan clean 
+.PHONY: lexan clean parser 
 all: $(MAIN)
 	@echo Simple compiler has been compiled
 $(MAIN): $(OBJECTS)
@@ -14,11 +16,12 @@ $(MAIN): $(OBJECTS)
 	$(CC) $(CPPFLAGS) $< -o $@
 
 clean:
-	rm *.o *~ $(MAIN)
+	rm *.o 
 	echo Clean Done!
 
-lexan: $(OBJECTS)
-	$(CC) $(CPPFLAGS) -o lexan $(OBJECTS)
+lexan: $(LEXAN_OBJECTS)
+	$(CC) $(CPPFLAGS) -o lexan $(LEXAN_OBJECTS)
 	rm *.o
 	
-
+parser: $(PARSER_OBJECTS)
+	$(CC) $(CPPFLAGS) -o parser $(PARSER_SOURCES)

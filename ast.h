@@ -31,7 +31,7 @@ class BinOp : public Expr {
 public:
     BinOp(char c, Expr* l, Expr* r);
     virtual ~BinOp();
-    virtual Node *Optimize();
+  //  virtual Node *Optimize(){};
     virtual void Translate();
 };
 
@@ -40,7 +40,7 @@ class UnMinus : public Expr {
 public:
     UnMinus(Expr* e);
     ~UnMinus();
-    Node *Optimize();
+   // Node *Optimize(){};
     void Translate();
 };
 
@@ -49,7 +49,7 @@ class Write : public Statm {
 public:
     Write(Expr* expr);
     virtual ~Write();
-    virtual Node *Optimize();
+    //virtual Node *Optimize(){};
     virtual void Translate();
 };
 
@@ -61,7 +61,7 @@ public:
     /* Statments Queue */
     void add(Statm* s);
     std::vector<Statm*> get();
-
+    virtual void Translate();
 
 };
 #endif

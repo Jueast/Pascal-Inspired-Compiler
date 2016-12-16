@@ -14,7 +14,7 @@ Comments begin with `{`, and end with `}`.
     PLUS            \+
     MINUS           -
     TIMES           \*
-    DIVIDE          \\
+    DIVIDE          /
     EQ              =
     NEQ             <>
     LT              <
