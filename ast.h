@@ -1,5 +1,5 @@
 #ifndef LOCAL_SFE_TEST
-#include "llvmlib.h"
+#include "llvm/IR/Value.h"  
 #endif
 #include <vector>
 #ifndef _NODE_
