@@ -14,10 +14,12 @@ const char *symbTable[40] = {
     "RPAR","LBRA","RBRA","ASSIGN","COMMA","SEMICOLON",
     "COLON","DOT","kwPROGRAM","kwFUNCTION","kwVAR","kwCONST",
     "kwBEGIN","kwEND","kwINTEGER","kwIF","kwTHEN","kwELSE",
+    "kwARRAY","kwOF",
     "kwWHILE","kwDO","kwWRITE","kwREAD","EOI","ERR"
 };
 static int character; // input symbol
 static InputCharType input; // input symbol type
+static int multi = 10;
 
 void readInput(void){
     character = getChar();
@@ -54,6 +56,8 @@ const struct {const char* s; LexSymbolType symb;} keyWordTable[] = {
     {"DO", kwDO},
     {"READ", kwREAD},
     {"WRITE", kwWRITE},
+    {"ARRAY", kwARRAY},
+    {"OF", kwOF},
     {NULL, (LexSymbolType) 0}
 };
 LexSymbolType keyWord(const char* id) {
@@ -151,6 +155,12 @@ start:
             readInput();
             goto letter;
         case DIGIT:
+            if (character == '0'){
+                data.type = INTEGER;
+                readInput();
+                goto pre_digit;
+            }
+            multi = 10;
             data.value = character - '0';
             data.type = INTEGER;
             readInput();
@@ -223,10 +233,30 @@ letter:
         data.type = keyWord(data.ident.c_str());
         return data;
     }
+pre_digit:
+    if(character == 'x'){
+        multi = 16;
+        data.value=0;
+        readInput();
+    }
+    else{
+        multi = 8;
+        data.value = 0;
+    }
+    goto digit;
+
 digit:
     switch(input) {
+        case LETTER:
+            if(character <= 'Z' && character >= 'A')
+                character += '0' - 'A';
+            else
+                character += '0' - 'a';
         case DIGIT:
-            data.value = 10 * data.value + (character - '0');
+            if(character - '0' > multi){
+                lexicalError("Wrong in number format.");
+            }
+            data.value = multi * data.value + (character - '0');
             readInput();
             goto digit;
         default:

@@ -12,7 +12,7 @@ enum SymbolType {Undef, Var, Const, Func};
 void declConstInt(std::string, int);
 void declConstFloat(std::string, float);
 void declVar(std::string, std::string);
-void declFunc(std::string FnName, std::vector<Variable> Args);
+void declFunc(std::string FnName, std::string type, std::vector<Variable> Args);
 
 
 
