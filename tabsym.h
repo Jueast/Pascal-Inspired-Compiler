@@ -9,6 +9,7 @@ union VariableValue {
     double floating;
 };
 enum SymbolType {Undef, Var, Const, Func};
+void outputTab();
 void declConstInt(std::string, int);
 void declConstFloat(std::string, float);
 void declVar(std::string, std::string);

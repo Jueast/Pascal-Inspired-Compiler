@@ -22,6 +22,8 @@ int main(int argc, char *argv[]) {
     }
     res = Program();
     res->Translate();
+    printf("-------------Symbol Table---------------\n");
+    outputTab();
     printf("\n---------------End------------------\n");
     return 0;
 }

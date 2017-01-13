@@ -10,8 +10,25 @@ struct TabElement {
     TabElement(){};
     TabElement(SymbolType s, Variable var, VariableValue value) 
             : symbol_type(s), var(var), value(value){};
+    void output();
 };
 
+void TabElement::output(){
+    std::string stype;
+    switch(symbol_type){
+        case Var:
+            stype = "Var";break;
+        case Const:
+            stype = "Const";break;
+        case Func:
+            stype = "Function";break;
+        default:
+            stype = "Undefined";break;
+    }
+    std::cout << stype << " " << var.type 
+              << " " << var.name << ": " 
+              << value.integer << std::endl;
+}
 
 static std::map<std::string, TabElement> SymbolTable;
 
@@ -23,6 +40,11 @@ void freeSymbTab() {
     SymbolTable.clear();
 }
 
+void outputTab(){
+    for(auto it = SymbolTable.begin(); it != SymbolTable.end(); it++){
+        it->second.output();
+    }
+}
 
 void declConstInt(std::string id, int val) {
     auto it = SymbolTable.find(id);
