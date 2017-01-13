@@ -1,7 +1,18 @@
 #include <string>
-enum SymbolType {Undef, Var, Const}
-void declConst(std::string, int);
-void declVar(std::string);
-int 
+#include <vector>
+typedef struct Variable{
+    std::string name;
+    std::string type;
+} Variable;
+union VariableValue {
+    int integer;
+    double floating;
+};
+enum SymbolType {Undef, Var, Const, Func};
+void declConstInt(std::string, int);
+void declConstFloat(std::string, float);
+void declVar(std::string, std::string);
+void declFunc(std::string FnName, std::vector<Variable> Args);
+
 
 
