@@ -7,12 +7,11 @@ struct TabElement {
     SymbolType symbol_type;
     Variable var;
     VariableValue value;
-    TabElement(SymbolType s, Variable var, VariableValue value){
-        this->symbol_type = s;
-        this->var = var;
-        this->value = value;
-    };
+    TabElement(){};
+    TabElement(SymbolType s, Variable var, VariableValue value) 
+            : symbol_type(s), var(var), value(value){};
 };
+
 
 static std::map<std::string, TabElement> SymbolTable;
 
@@ -36,7 +35,8 @@ void declConstInt(std::string id, int val) {
     Variable var;
     var.type = "Integer";
     var.name = id;
-    SymbolTable[id] = TabElement(Const, var, vval);
+    TabElement t(Const, var, vval);
+    SymbolTable[id] = t;
 }
 
 void declConstFloat(std::string id, double val) {
@@ -50,7 +50,8 @@ void declConstFloat(std::string id, double val) {
     Variable var;
     var.type = "Float";
     var.name = id;
-    SymbolTable[id] = TabElement(Const, var, vval);
+    TabElement t(Const, var, vval);
+    SymbolTable[id] = t;
 }
 
 void declVar(std::string type, std::string name) {
@@ -63,5 +64,6 @@ void declVar(std::string type, std::string name) {
     var.type = type;
     var.name = name;
     VariableValue vval;
-    SymbolTable[name] = TabElement(Var, var, vval);
+    TabElement t(Var, var, vval);
+    SymbolTable[name] = t;
 }

@@ -2,6 +2,7 @@
 #include "ast.h"
 #include "lexan.h"
 #include "parser.h"
+#include "tabsym.h"
 
 int main(int argc, char *argv[]) {
     char *fileName;
