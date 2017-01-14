@@ -2,7 +2,7 @@
 #include <string>
 #include <iostream>
 #include <map>
-
+#include <vector>
 struct TabElement {
     SymbolType symbol_type;
     Variable var;
@@ -16,7 +16,7 @@ struct TabElement {
 void TabElement::output(){
     std::string stype;
     switch(symbol_type){
-        case Var:
+        case VarId:
             stype = "Var";break;
         case Const:
             stype = "Const";break;
@@ -86,6 +86,29 @@ void declVar(std::string type, std::string name) {
     var.type = type;
     var.name = name;
     VariableValue vval;
-    TabElement t(Var, var, vval);
+    TabElement t(VarId, var, vval);
     SymbolTable[name] = t;
+}
+
+SymbolType checkSymbolType(std::string id, int* v){
+   auto it = SymbolTable.find(id);
+   if(it != SymbolTable.end()){
+        *v = it->second.value.integer;
+        return it->second.symbol_type;
+   }
+   error(id, "is not declared.");
+   return Undef;
+
+}
+
+std::vector<Variable> VarNames(void){ 
+    std::vector<Variable> vars;
+    for(auto it = SymbolTable.begin(); 
+        it != SymbolTable.end(); it++){
+        if(it->second.symbol_type == VarId){
+            vars.push_back(it->second.var);
+        }
+    
+    }
+    return vars;
 }

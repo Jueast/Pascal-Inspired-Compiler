@@ -1,6 +1,6 @@
 #include <iostream>
 #include <memory>
-
+#include <vector>
 
 #include "llvm/Analysis/Passes.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
@@ -45,6 +45,7 @@
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include "parser.h"
 #include "ast.h"
+#include "tabsym.h"
 
 using namespace llvm;
 using namespace llvm::legacy;
@@ -167,6 +168,26 @@ int createObjectFile(Module *mod, const char *targetName)
 
 IRBuilder<> builder(getGlobalContext());
 Module * module = new Module("Sfe", getGlobalContext());
+static std::map<std::string, AllocaInst*> NamedValues;
+static  AllocaInst* CreateEntryBlockAlloca(Function *TheFunction,
+                                        std::string VarName) 
+{
+  IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
+                   TheFunction->getEntryBlock().begin());
+  return TmpB.CreateAlloca(Type::getInt32Ty(getGlobalContext()), 0,
+                            VarName.c_str());
+}
+
+void GetVariables(){
+    std::vector<Variable> vars = VarNames();
+    Function *TheFunction = builder.GetInsertBlock()->getParent();
+    for(auto it = vars.begin(); it != vars.end(); it++){
+        AllocaInst* alloc = CreateEntryBlockAlloca(TheFunction, it->name);
+        builder.CreateStore(builder.getInt32(0), alloc);
+        NamedValues[it->name] = alloc;
+    }
+
+}
 
 int main(int argc, char* argv[])
 {
@@ -197,6 +218,7 @@ int main(int argc, char* argv[])
          return 0;
   }
   Node* res = Program();
+  GetVariables();
   res->codegen();
   Value * returnValue = builder.getInt32(0);
   builder.CreateRet(returnValue);
@@ -225,6 +247,13 @@ Constant* printFunc() {
     return module->getOrInsertFunction("printf", printfType);
 }
 
+Constant* scanfFunc() {
+    std::vector<Type *> args;
+    args.push_back(Type::getInt8Ty(getGlobalContext()));
+    FunctionType *scanfType = FunctionType::get(builder.getInt32Ty(), args, true);
+    return module->getOrInsertFunction("scanf", scanfType);
+
+}
 
 //--------------CodeGEN-----------------
 
@@ -232,6 +261,23 @@ void LogError(const char *Str) {
     std::cout << Str;
     exit(1);
 }
+Value* Var::codegen() {
+
+   if(rvalue){
+        Value *V = NamedValues[name];
+        if(!V){
+            LogError("Unknown variable name");
+            return nullptr;
+        }
+        return builder.CreateLoad(V, name.c_str());
+   }
+   else{
+       LogError("Bad use of variable");
+       return nullptr;
+    
+   }
+}
+
 
 Value* IntConst::codegen() {
     return ConstantInt::get(Type::getInt32Ty(getGlobalContext()), val);
@@ -240,7 +286,6 @@ Value* IntConst::codegen() {
 Value* BinOp::codegen() {
     Value* L = left->codegen();
     Value* R = right->codegen();
-
     switch (op) {
         case '+':
             return builder.CreateAdd(L, R, ".addtmp");
@@ -260,14 +305,36 @@ Value* UnMinus::codegen() {
     Value* E = expr->codegen();
     return builder.CreateNeg(E, ".negtmp");
 }
+Value* Assign::codegen(){
+    Value* V = NamedValues[var->name];
+    if(!V){
+        LogError("Unknown variable name");
+        return nullptr;
+    }
+    Value* E = expr->codegen();
+    return builder.CreateStore(E, V);
+}
 
+static Value* writeFormatStr = builder.CreateGlobalStringPtr("value = %d\n"); 
 Value* Write::codegen() {
     Value* E = expr->codegen();
-    Value* formatStr = builder.CreateGlobalStringPtr("value = %d\n");
     std::vector<llvm::Value *> values;
-    values.push_back(formatStr);
+    values.push_back(writeFormatStr);
     values.push_back(E);
     return builder.CreateCall(printFunc(), values);
+}
+
+static Value* scanfFormatStr = builder.CreateGlobalStringPtr("%d");
+Value* Read::codegen(){
+    Value* V = NamedValues[var->name];
+    if(!V){
+        LogError("Unknown variable name");
+        return nullptr;
+    }
+    std::vector<llvm::Value *> values;
+    values.push_back(scanfFormatStr);
+    values.push_back(V);
+    return builder.CreateCall(scanfFunc(), values);
 }
 
 Value* StatmList::codegen() {

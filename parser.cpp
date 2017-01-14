@@ -140,6 +140,27 @@ Statm* Statment(void){
             Compare(SEMICOLON);
             return new Write(n);
         }
+        case kwREAD: {
+            Symb = readLexem();
+            auto id = Compare(IDENT);
+            Compare(SEMICOLON);
+            return new Read(new Var(id.ident, false));     
+        }
+        case IDENT: {
+            Statm* result = NULL; 
+            auto id = Compare(IDENT).ident;
+            int v;
+            SymbolType st = checkSymbolType(id, &v);
+            switch(st){
+                    case VarId:
+                        Compare(ASSIGN);
+                        result = new Assign(new Var(id, false), Expression());
+                    case Func:
+                    default:break;
+            }
+            Compare(SEMICOLON);
+            return result; 
+     }
         default:
             ExpansionError("Statment", Symb.type);
             return nullptr;
@@ -190,6 +211,11 @@ Expr* TermPrime(Expr * l) {
 
 Expr* Factor(){
     switch (Symb.type) {
+        case IDENT: {
+            std::string id = Symb.ident;
+            Symb = readLexem();
+            return VarOrConst(id);
+        }
         case LPAR:{ 
             Symb = readLexem();
             Expr* e = Expression();

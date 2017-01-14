@@ -2,6 +2,7 @@
 #include "llvm/IR/Value.h"  
 #endif
 #include <vector>
+#include <string>
 #ifndef _NODE_
 #define _NODE_
 
@@ -21,7 +22,6 @@ class Expr : public Node {
 class Statm : public Node {
 };
 
-
 class IntConst : public Expr {
     int val;
 public:
@@ -31,6 +31,17 @@ public:
     virtual llvm::Value* codegen();
 #endif
     int Val();
+};
+
+class Var : public Expr {
+    bool rvalue;
+public:
+    std::string name;
+    Var(std::string, bool);
+    virtual void Translate();
+#ifndef LOCAL_SFE_TEST
+    virtual llvm::Value* codegen();
+#endif
 };
 
 class BinOp : public Expr {
@@ -70,6 +81,31 @@ public:
 #endif 
 };
 
+class Read : public Statm {
+    Var *var;
+public:
+    Read(Var* var);
+    virtual ~Read();
+    //virtual Node *Optimize(){};
+    virtual void Translate();
+#ifndef LOCAL_SFE_TEST
+    virtual llvm::Value* codegen();  
+#endif 
+};
+
+
+class Assign : public Statm {
+    Var *var;
+    Expr *expr;
+public:
+    Assign(Var*, Expr*);
+    virtual ~Assign();
+    virtual void Translate();
+#ifndef LOCAL_SFE_TEST
+    virtual llvm::Value* codegen();  
+#endif 
+};
+
 class StatmList : public Node {
     std::vector<Statm*> statm_list;
 public:
@@ -83,4 +119,6 @@ public:
     virtual llvm::Value* codegen();
 #endif
 };
+
+Expr* VarOrConst(std::string id);
 #endif
