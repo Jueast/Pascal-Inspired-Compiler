@@ -290,14 +290,14 @@ Value* IntConst::codegen() {
 Value* BinOp::codegen() {
     Value* L = left->codegen();
     Value* R = right->codegen();
-    switch (op) {
-        case '+':
+    switch (this.op) {
+        case Add:
             return builder.CreateAdd(L, R, ".addtmp");
-        case '-':
+        case Sub:
             return builder.CreateSub(L, R, ".subtmp");
-        case '*':
+        case Mult:
             return builder.CreateMul(L, R, ".multmp");
-        case '/':
+        case Div:
             return builder.CreateSDiv(L, R, ".divtmp");
         default:
             LogError("Errors in BinOp code genearting! Wrong OP!\n ");

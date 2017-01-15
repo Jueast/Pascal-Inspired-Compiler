@@ -4,29 +4,32 @@
 #include <vector>
 #include <string>
 #include <iostream>
-
+const std::string OpNames[] = 
+{
+    "+", "-", "*", "/", "mod", "<", ">", "=", "<>", "<=", ">=", "err"
+};
 Var::Var(std::string n, bool rv){
     name = n; rvalue = rv;
 }
 
-void Var::Translate(){
+void Var::Translate(int i){
     std::cout << name;
 }
 
 int IntConst::Val() {
     return val;
 }
-void IntConst::Translate(){
+void IntConst::Translate(int i){
     std::cout << val;
 }
-void BinOp::Translate(){
+void BinOp::Translate(int i){
     std::cout << '(';
-    left->Translate();
-    std::cout << ' ' << op << ' ';
-    right->Translate();
+    left->Translate(i);
+    std::cout << ' ' << OpNames[op] << ' ';
+    right->Translate(i);
     std::cout << ')';
 }
-BinOp::BinOp(char op, Expr* l, Expr* r) {
+BinOp::BinOp(Op op, Expr* l, Expr* r) {
     this->op = op;
     left = l;
     right = r;
@@ -36,10 +39,10 @@ BinOp::~BinOp() {
     delete left;
     delete right;
 }
-void UnMinus::Translate() {
+void UnMinus::Translate(int i) {
     std::cout << "(";
     std::cout << "-";
-    expr->Translate();
+    expr->Translate(i);
     std::cout << ")";
 }
 UnMinus::UnMinus(Expr *e) {
@@ -49,11 +52,19 @@ UnMinus::UnMinus(Expr *e) {
 UnMinus::~UnMinus() {
     delete expr;
 }
-void Assign::Translate() {
+void Assign::Translate(int i) {
+    for(int j =0; i != j; j++)
+            std::cout << "    ";
+    if (checkSymbolType(var->name, NULL) != VarId) {
+        std::cout << "Erro Assign to ";
+        var->Translate(i);
+        std::cout << std::endl;
+        return;
+    }
     std::cout << "Assign: ";
-    var->Translate();
+    var->Translate(i);
     std::cout << " = ";
-    expr->Translate();
+    expr->Translate(i);
     std::cout << std::endl;
 }
 
@@ -66,9 +77,11 @@ Assign::~Assign(){
     delete(expr);
 }
 
-void Write::Translate() {
+void Write::Translate(int i) {
+    for(int j =0; i != j; j++)
+        std::cout << "    ";
     std::cout << "Write: ";
-    expr->Translate();
+    expr->Translate(i);
     std::cout << std::endl;
 }
 Write::Write(Expr *e) {
@@ -78,9 +91,11 @@ Write::Write(Expr *e) {
 Write::~Write() {
     delete expr;
 }
-void Read::Translate() {
+void Read::Translate(int i) {
+    for(int j =0; i != j; j++)
+        std::cout << "    ";
     std::cout << "Read: ";
-    var->Translate();
+    var->Translate(i);
     std::cout  << " from stdin." << std::endl;
 }
 Read::Read(Var *v) {
@@ -91,6 +106,36 @@ Read::~Read() {
     delete var;
 }
 
+If::If(Expr *c, Statm *ts, Statm *es)
+{ cond = c; thenstm = ts; elsestm = es; }  
+
+If::~If()
+{ delete cond; delete thenstm; delete elsestm; }
+void If::Translate(int i){
+    for(int j = 0; i != j;j++)
+        std::cout << "    ";
+    std::cout << "IF ";
+    cond->Translate(i);
+    std::cout << " THEN:" << std::endl;
+    thenstm->Translate(i+1);
+    if(elsestm){
+        std::cout<<"ELSE: " << std::endl;
+        elsestm->Translate(i+1);
+    }
+}
+While::While(Expr *c, Statm *b)
+{ cond = c; body = b; }
+
+While::~While()
+{ delete body; delete cond;}
+void While::Translate(int i){
+    for(int j = 0; i != j; j++)
+        std::cout << "    ";
+    std::cout << "WHILE ";
+    cond->Translate(i);
+    std::cout << " DO:" << std::endl;
+    body->Translate(i+1);
+}
 StatmList::StatmList() {
 
 }
@@ -109,9 +154,9 @@ std::vector<Statm*> StatmList::get(){
     return statm_list;
 }
 
-void StatmList::Translate(){
+void StatmList::Translate(int i){
     for (auto iter=statm_list.begin(); iter != statm_list.end(); iter++){
-        (*iter)->Translate();
+        (*iter)->Translate(i);
     }
 }
 

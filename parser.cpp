@@ -14,8 +14,12 @@ void DeclarationPart(void);
 void ConstDeclarationPart(void);
 void VarDeclarationPart(void);
 StatmList* StatmentPart(void);
-StatmList* StatmentSequence(void);
-Statm* Statment(void); // Only Write Now...
+StatmList* StatmentSequence(StatmList* init);
+Statm* Statment(void);
+Statm* For(void);
+Expr* Condition(void);
+Statm* ElsePart(void);
+Op RelOp(void);
 Expr* Expression(void);
 Expr* ExpressionPrime(Expr*);
 Expr* Term(void);
@@ -25,7 +29,8 @@ Expr* Factor(void);
 LexicalSymbol Symb;
 
 void CompareError(LexSymbolType s) { 
-    std::cout << "Error while comparing, expected " << symbTable[s] << std::endl;
+    std::cout << "Error while comparing, expected " << symbTable[s] 
+            << " in " << lineNumber << " line."<< std::endl;
     exit(1);
 }
 
@@ -48,7 +53,9 @@ LexicalSymbol Compare(LexSymbolType s) {
 StatmList* Program(void) {
     /* Program -> ProgramHead Block */
     ProgramHead();
-    return Block();
+    StatmList* result = Block();
+    Compare(DOT);
+    return result;
 }
 
 void ProgramHead() {
@@ -119,17 +126,20 @@ void VarDeclarationPart() {
 StatmList* StatmentPart(void) {
     /* StatmentPart ->begin StatmentSequence end.*/
     Compare(kwBEGIN);
-    StatmList* n = StatmentSequence();
+    StatmList* n = StatmentSequence(nullptr);
     Compare(kwEND);
-    Compare(DOT);
+    if(Symb.type == SEMICOLON){
+        Symb = readLexem();
+    }
     return n;
 }
-StatmList* StatmentSequence(void) {
-    StatmList* sl = new StatmList();
+StatmList* StatmentSequence(StatmList * init) {
+    if(!init)
+        init = new StatmList();
     while(Symb.type != kwEND){
-        sl->add(Statment());
+        init->add(Statment());
     }
-    return sl;
+    return init;
 }
 
 Statm* Statment(void){
@@ -146,12 +156,41 @@ Statm* Statment(void){
             Compare(SEMICOLON);
             return new Read(new Var(id.ident, false));     
         }
+        case kwIF: {
+            Symb = readLexem();
+            Expr *cond = Condition();
+            Compare(kwTHEN);
+            Statm* thenPart;
+            if(Symb.type == kwBEGIN)
+                thenPart = StatmentPart();
+            else
+                thenPart = Statment();
+            return new If(cond, thenPart, ElsePart());
+        }
+        case kwWHILE: {
+            Expr *cond;
+            Symb = readLexem();
+            cond = Condition();
+            Compare(kwDO);
+            Statm* body;
+            if(Symb.type == kwBEGIN)
+                body = StatmentPart();
+            else
+                body = Statment();
+            return new While(cond, body);
+
+        }
+        case kwFOR:
+            return For();
+        case kwBREAK:
+            return new Break();
         case IDENT: {
             Statm* result = NULL; 
             auto id = Compare(IDENT).ident;
             int v;
             SymbolType st = checkSymbolType(id, &v);
             switch(st){
+                    case Const:
                     case VarId:
                         Compare(ASSIGN);
                         result = new Assign(new Var(id, false), Expression());
@@ -166,6 +205,76 @@ Statm* Statment(void){
             return nullptr;
     }
 }
+
+Statm* For(){
+    Symb = readLexem();
+    std::string name = Compare(IDENT).ident;
+    Compare(ASSIGN);
+    Expr* init = Expression();
+    Statm* initstat = new Assign(new Var(name, false), init);
+    int step = Symb.type == kwTO ? 1 : -1;
+    Symb = readLexem();
+    Expr* fin = Expression();
+    BinOp* cond = new BinOp(Neq, new BinOp(Sub, new Var(name, true), new IntConst(step)), fin);
+    Compare(kwDO);
+    StatmList* body = new StatmList();
+    body->add(initstat);
+    if(Symb.type == kwBEGIN){
+        Symb = readLexem();
+        body = StatmentSequence(body);
+        Compare(kwEND);
+        if(Symb.type == SEMICOLON)
+            Symb = readLexem();
+    } else 
+        body->add(Statment());
+    body->add(new Assign(new Var(name, false), new BinOp(Add, new Var(name, true), new IntConst(step))));
+    return new While(cond, body);
+}
+
+Statm* ElsePart() {
+    Statm* elsePart = nullptr;
+    if (Symb.type == kwELSE) {
+        Symb = readLexem();
+        if(Symb.type == kwBEGIN)
+            elsePart = StatmentPart();
+        else
+            elsePart = Statment();
+    }
+    return elsePart;
+}
+Expr* Condition() {
+    Expr *left = Expression();
+    Op op = RelOp();
+    Expr *right = Expression();
+    return new BinOp(op, left, right);
+}
+Op RelOp() {
+    switch(Symb.type) {
+        case EQ:
+            Symb = readLexem();
+            return Eq;
+        case NEQ:
+            Symb = readLexem();
+            return Neq;
+        case LT:
+            Symb = readLexem();
+            return Lt;
+        case GT:
+            Symb = readLexem();
+            return Gt;
+        case LTE:
+            Symb = readLexem();
+            return Lte;
+        case GTE:
+            Symb = readLexem();
+            return Gte;
+        default:
+            ExpansionError("RelOp", Symb.type);
+            return Error;
+    
+    }
+
+}
 Expr* Expression(void) {
     /* E -> T E' */
 //    std::cout << "E -> T E'" << std::endl;
@@ -178,12 +287,12 @@ Expr* ExpressionPrime(Expr* l) {
             /* E'-> + T E' */
             Symb = readLexem();
 //            printf(" E' -> + T E'\n");
-            return ExpressionPrime(new BinOp('+', l, Term()));
+            return ExpressionPrime(new BinOp(Add, l, Term()));
         case MINUS:
             /* E'-> - T E' */
             Symb = readLexem();
 //            printf(" E' -> - T E'\n");
-            return ExpressionPrime(new BinOp('-', l, Term()));
+            return ExpressionPrime(new BinOp(Sub, l, Term()));
         default:
             return l;
     }
@@ -198,11 +307,14 @@ Expr* TermPrime(Expr * l) {
         case TIMES:
             Symb = readLexem();
 //            printf(" T' -> * F T' \n");
-            return TermPrime(new BinOp('*', l, Factor()));
+            return TermPrime(new BinOp(Mult, l, Factor()));
         case DIVIDE:
             Symb = readLexem();
 //            printf(" T' -> / F T'\n");
-            return TermPrime(new BinOp('/', l, Factor()));
+            return TermPrime(new BinOp(Div, l, Factor()));
+        case kwMOD:
+            Symb = readLexem();
+            return TermPrime(new BinOp(Mod, l, Factor()));
         default:
             return l;
 

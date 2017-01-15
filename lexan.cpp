@@ -9,7 +9,7 @@ typedef enum {
 }InputCharType;
 // same order in LexSymbolType
 const char *symbTable[50] = {
-    "IDENT","INTEGER","PLUS","MINUS","TIMES","DIVIDE",
+    "IDENT","INTEGER","PLUS","MINUS","TIMES","DIVIDE", "kwMOD",
     "EQ","NEQ","LT","GT","LTE","GTE","LPAR",
     "RPAR","LBRA","RBRA","ASSIGN","COMMA","SEMICOLON",
     "COLON","DOT","kwPROGRAM","kwFUNCTION","kwVAR","kwCONST",
@@ -64,6 +64,7 @@ const struct {const char* s; LexSymbolType symb;} keyWordTable[] = {
     {"FOR", kwFOR},
     {"DOWNTO", kwDOWNTO},
     {"BREAK", kwBREAK},
+    {"MOD", kwMOD},
     {NULL, (LexSymbolType) 0}
 };
 LexSymbolType keyWord(const char* id) {

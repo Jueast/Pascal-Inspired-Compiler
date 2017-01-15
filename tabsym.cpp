@@ -93,7 +93,8 @@ void declVar(std::string type, std::string name) {
 SymbolType checkSymbolType(std::string id, int* v){
    auto it = SymbolTable.find(id);
    if(it != SymbolTable.end()){
-        *v = it->second.value.integer;
+        if(v)
+            *v = it->second.value.integer;
         return it->second.symbol_type;
    }
    error(id, "is not declared.");
