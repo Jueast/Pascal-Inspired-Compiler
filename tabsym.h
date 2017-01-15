@@ -17,9 +17,11 @@ struct TabElement {
     SymbolType symbol_type;
     Variable var;
     VariableValue value;
+    int size;
+    int bias;
     TabElement(){};
-    TabElement(SymbolType s, Variable var, VariableValue value) 
-            : symbol_type(s), var(var), value(value){};
+    TabElement(SymbolType s, Variable var, VariableValue value, int size, int b) 
+            : symbol_type(s), var(var), value(value), size(size), bias(b){};
     void output();
 };
 
@@ -40,6 +42,7 @@ void declVar(std::string, std::string);
 void declArrayVar(std::string, std::string, int size, int bias);
 void declFunc(std::string FnName, std::string type, std::vector<Variable> Args);
 SymbolType checkSymbolType(SymbolTableMap*, std::string, int* v);
-std::vector<Variable> VarNames(SymbolTableMap*);
+const TabElement* getTabElement(SymbolTableMap*, std::string);
+std::vector<TabElement> VarNames(SymbolTableMap*);
 
 

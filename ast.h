@@ -49,11 +49,21 @@ public:
 };
 
 class Var : public Expr {
-    bool rvalue;
 public:
+    bool rvalue;
     std::string name;
     Var(std::string, bool);
     virtual void Translate(int i);
+#ifndef LOCAL_SFE_TEST
+    virtual llvm::Value* codegen();
+#endif
+};
+class VarInArray : public Var {
+public:
+    Expr* index; 
+    VarInArray(std::string, bool, Expr*);
+    virtual void Translate(int i);
+    virtual ~VarInArray();
 #ifndef LOCAL_SFE_TEST
     virtual llvm::Value* codegen();
 #endif
@@ -178,4 +188,5 @@ public:
 };
 
 Expr* VarOrConst(std::string id);
+VarInArray* ArrayAccess(std::string, Expr*, bool);
 #endif

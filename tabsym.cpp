@@ -12,6 +12,8 @@ void TabElement::output(){
             stype = "Const";break;
         case Func:
             stype = "Function";break;
+        case ArrayVar:
+            stype = "ArrayVar";break;
         default:
             stype = "Undefined";break;
     }
@@ -56,7 +58,7 @@ void declConstInt(std::string id, int val) {
     Variable var;
     var.type = "Integer";
     var.name = id;
-    TabElement t(Const, var, vval);
+    TabElement t(Const, var, vval, 1, 0);
     (CurrentSymbolTable->table)[id] = t;
 }
 
@@ -71,7 +73,7 @@ void declConstFloat(std::string id, double val) {
     Variable var;
     var.type = "Float";
     var.name = id;
-    TabElement t(Const, var, vval);
+    TabElement t(Const, var, vval, 1, 0);
     (CurrentSymbolTable->table)[id] = t;
 }
 
@@ -85,10 +87,34 @@ void declVar(std::string type, std::string name) {
     var.type = type;
     var.name = name;
     VariableValue vval;
-    TabElement t(VarId, var, vval);
+    TabElement t(VarId, var, vval, 1, 0);
     (CurrentSymbolTable->table)[name] = t;
 }
+void declArrayVar(std::string type, std::string name, int size, int bias){
+   auto it = CurrentSymbolTable->table.find(name);
+    if(it != CurrentSymbolTable->table.end()) {
+        error(name, "is declared again.");
+        return;
+    }
+    Variable var;
+    var.type = type;
+    var.name = name;
+    VariableValue vval;
+    TabElement t(ArrayVar, var, vval, size, bias);
+    (CurrentSymbolTable->table)[name] = t;
 
+}
+const TabElement* getTabElement(SymbolTableMap* st, std::string id){
+    auto it = st->table.find(id);
+    if(it != st->table.end()){
+        return &(it->second); 
+    }
+    if(!st->parentTable)
+        error(id, "is not declared");
+    else
+        return getTabElement(st->parentTable, id);
+    return nullptr;
+}
 SymbolType checkSymbolType(SymbolTableMap* SymbolTable, std::string id, int* v){
    auto it = SymbolTable->table.find(id);
    if(it != SymbolTable->table.end()){
@@ -104,12 +130,12 @@ SymbolType checkSymbolType(SymbolTableMap* SymbolTable, std::string id, int* v){
 
 }
 
-std::vector<Variable> VarNames(SymbolTableMap* SymbolTable){ 
-    std::vector<Variable> vars;
+std::vector<TabElement> VarNames(SymbolTableMap* SymbolTable){ 
+    std::vector<TabElement> vars;
     for(auto it = SymbolTable->table.begin(); 
         it != SymbolTable->table.end(); it++){
-        if(it->second.symbol_type == VarId){
-            vars.push_back(it->second.var);
+        if(it->second.symbol_type == VarId || it->second.symbol_type == ArrayVar){
+            vars.push_back(it->second);
         }
     
     }

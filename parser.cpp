@@ -128,7 +128,29 @@ void VarDeclarationPart(StatmList* block) {
         for(auto it = names.begin(); it < names.end(); it++){
             declVar("Integer", *it);
         }
-   }else{}
+   }else if(Symb.type == kwARRAY) {
+        Symb = readLexem();
+        Compare(LBRA);
+        int sign;
+        if(Symb.type == MINUS){
+            Symb = readLexem();
+            sign = -1;
+        } else sign = 1;
+        int start = Compare(INTEGER).value * sign;
+        Compare(DOT);Compare(DOT);
+        if(Symb.type == MINUS){
+            Symb = readLexem();
+            sign = -1;
+        } else sign = 1;
+        int fin = Compare(INTEGER).value * sign;
+        Compare(RBRA);
+        Compare(kwOF);
+        if(Symb.type == kwINTEGER){
+            Compare(kwINTEGER);
+            for(auto it = names.begin(); it < names.end(); it++)
+                declArrayVar("Integer", *it, (fin-start)+1, start);
+        } else{}
+   } else {}
    if(Symb.type == EQ){
         Symb = readLexem();
         Expr* init = Expression();
@@ -207,15 +229,20 @@ Statm* Statment(void){
         case IDENT: {
             Statm* result = NULL; 
             auto id = Compare(IDENT).ident;
-            int v;
-            SymbolType st = checkSymbolType(getCurrentSymbolTable(), id, &v);
-            switch(st){
-                    case Const:
-                    case VarId:
+            switch(Symb.type){
+                    case LBRA:{
+                        Symb = readLexem();
+                        Expr* index = Expression();
+                        Compare(RBRA);
+                        VarInArray* v = ArrayAccess(id, index, false);
+                        Compare(ASSIGN);
+                        result = new Assign(v, Expression());
+                        break; 
+                    }
+                    default:
                         Compare(ASSIGN);
                         result = new Assign(new Var(id, false), Expression());
-                    case Func:
-                    default:break;
+                        break;
             }
             Compare(SEMICOLON);
             return result; 
@@ -348,7 +375,15 @@ Expr* Factor(){
         case IDENT: {
             std::string id = Symb.ident;
             Symb = readLexem();
-            return VarOrConst(id);
+            switch(Symb.type){
+                case LBRA:{
+                    Symb = readLexem();
+                    Expr* index = Expression();
+                    Compare(RBRA);
+                    return ArrayAccess(id, index, true); 
+                }
+                default: return VarOrConst(id);
+            }
         }
         case LPAR:{ 
             Symb = readLexem();

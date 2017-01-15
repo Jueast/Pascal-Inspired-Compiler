@@ -173,21 +173,27 @@ Value* scanfFormatStr;
 BasicBlock* breakTarget;
 static std::map<std::string, AllocaInst*> NamedValues;
 static  AllocaInst* CreateEntryBlockAlloca(Function *TheFunction,
-                                        std::string VarName) 
+                                        std::string VarName, Value* size) 
 {
   IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
                    TheFunction->getEntryBlock().begin());
-  return TmpB.CreateAlloca(Type::getInt32Ty(getGlobalContext()), 0,
+  return TmpB.CreateAlloca(Type::getInt32Ty(getGlobalContext()), size,
                             VarName.c_str());
 }
 
 void GetVariables(SymbolTableMap* sm){
-    std::vector<Variable> vars = VarNames(sm);
+    std::vector<TabElement> vars = VarNames(sm);
     Function *TheFunction = builder.GetInsertBlock()->getParent();
     for(auto it = vars.begin(); it != vars.end(); it++){
-        AllocaInst* alloc = CreateEntryBlockAlloca(TheFunction, it->name);
-        builder.CreateStore(builder.getInt32(0), alloc);
-        NamedValues[it->name] = alloc;
+        AllocaInst* alloc = nullptr;
+        if(it->symbol_type == VarId) {
+            alloc = CreateEntryBlockAlloca(TheFunction, it->var.name, nullptr);
+            builder.CreateStore(builder.getInt32(0), alloc);
+        }
+        else if (it->symbol_type == ArrayVar){
+            alloc = CreateEntryBlockAlloca(TheFunction, it->var.name, builder.getInt32(it->size));
+        }
+        NamedValues[it->var.name] = alloc;
     }
 
 }
@@ -267,22 +273,34 @@ void LogError(const char *Str) {
     exit(1);
 }
 Value* Var::codegen() {
-
+    Value *V = NamedValues[name];
+    if(!V){
+        LogError("Unknown variable name");
+        return nullptr;
+    }
    if(rvalue){
-        Value *V = NamedValues[name];
-        if(!V){
-            LogError("Unknown variable name");
-            return nullptr;
-        }
         return builder.CreateLoad(V, name.c_str());
    }
    else{
-       LogError("Bad use of variable");
-       return nullptr;
-    
+       return V;
    }
 }
+Value* VarInArray::codegen() {
+    Value* arr = NamedValues[name];
+    if(!arr){
+        LogError("Unknown variable name");
+        return nullptr;
+    }
+    Value* i = index->codegen();
+    Value* idxList[2] = {ConstantInt::get(i->getType(), 0), i};
+    Value* ptr = builder.CreateGEP(arr, idxList, name);
 
+    if(rvalue){
+        return builder.CreateLoad(ptr, name.c_str()); 
+    }
+    else
+        return ptr;
+}
 
 Value* IntConst::codegen() {
     return ConstantInt::get(Type::getInt32Ty(getGlobalContext()), val);
@@ -380,13 +398,8 @@ Value* Break::codegen(){
     return nullptr;
 }
 Value* Assign::codegen(){
-    Value* V = NamedValues[var->name];
-    if(!V){
-        LogError("Unknown variable name");
-        return nullptr;
-    }
     Value* E = expr->codegen();
-    return builder.CreateStore(E, V);
+    return builder.CreateStore(E, var->codegen());
 }
 Value* Write::codegen() { 
     Value* E = expr->codegen();

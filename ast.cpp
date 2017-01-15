@@ -27,7 +27,16 @@ Var::Var(std::string n, bool rv){
 void Var::Translate(int i){
     std::cout << name;
 }
-
+VarInArray::VarInArray(std::string n, bool rv, Expr* i): Var(n, rv), index(i){
+}
+VarInArray::~VarInArray(){
+    delete index;
+}
+void VarInArray::Translate(int i){
+    std::cout << name << "[";
+    index->Translate(i);
+    std::cout << "]";
+}
 int IntConst::Val() {
     return val;
 }
@@ -67,12 +76,12 @@ UnMinus::~UnMinus() {
 void Assign::Translate(int i) {
     for(int j =0; i != j; j++)
             std::cout << "    ";
-    if (checkSymbolType(getCurrentSymbolTable(), var->name, NULL) != VarId) {
-        std::cout << "Erro Assign to ";
-        var->Translate(i);
-        std::cout << std::endl;
-        return;
-    }
+//    if (checkSymbolType(getCurrentSymbolTable(), var->name, NULL) != VarId) {
+//        std::cout << "Erro Assign to ";
+//        var->Translate(i);
+//        std::cout << std::endl;
+//        return;
+//    }
     std::cout << "Assign: ";
     var->Translate(i);
     std::cout << " = ";
@@ -186,8 +195,15 @@ Expr* VarOrConst(std::string id){
             return new Var(id, true);
         case Const:
             return new IntConst(v);
-        case Func:
         default:
             return NULL;
     }
+}
+
+VarInArray* ArrayAccess(std::string id, Expr* index, bool rvalue){
+    const TabElement* p = getTabElement(getCurrentSymbolTable(), id); 
+    if(p->symbol_type != ArrayVar){
+        return nullptr;
+    }
+    else return new VarInArray(id, rvalue, new BinOp(Sub, index, new IntConst(p->bias)));
 }
