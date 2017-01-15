@@ -181,7 +181,7 @@ static  AllocaInst* CreateEntryBlockAlloca(Function *TheFunction,
                             VarName.c_str());
 }
 
-void GetVariables(SymbolTableMap* sm){
+void GetVariables(SymbolTableMap* sm, bool re){
     std::vector<TabElement> vars = VarNames(sm);
     Function *TheFunction = builder.GetInsertBlock()->getParent();
     for(auto it = vars.begin(); it != vars.end(); it++){
@@ -193,8 +193,13 @@ void GetVariables(SymbolTableMap* sm){
         else if (it->symbol_type == ArrayVar){
             alloc = CreateEntryBlockAlloca(TheFunction, it->var.name, builder.getInt32(it->size));
         }
-        NamedValues[it->var.name] = alloc;
+        if(!NamedValues[it->var.name])
+            NamedValues[it->var.name] = alloc;
     }
+    if(re && sm->parentTable){
+        GetVariables(sm->parentTable, re);
+    }
+
 
 }
 
@@ -229,9 +234,7 @@ int main(int argc, char* argv[])
   writeFormatStr = builder.CreateGlobalStringPtr("value = %d\n");
   scanfFormatStr = builder.CreateGlobalStringPtr("%d");
   BlockNode* res = Program();
-  GetVariables(res->getSymbolTable());
-  res->codegen();
-  Value * returnValue = builder.getInt32(0);
+  Value * returnValue = res->codegen();
   builder.CreateRet(returnValue);
 
   if (debug)
@@ -272,6 +275,12 @@ void LogError(const char *Str) {
     std::cout << Str;
     exit(1);
 }
+Value* BlockNode::codegen(){
+    GetVariables(SymbolTable, true);
+    statmList->codegen();
+    Value *V = NamedValues[name];
+    return builder.CreateLoad(V, name.c_str());
+}
 Value* Var::codegen() {
     Value *V = NamedValues[name];
     if(!V){
@@ -292,11 +301,11 @@ Value* VarInArray::codegen() {
         return nullptr;
     }
     Value* i = index->codegen();
-    Value* idxList[2] = {ConstantInt::get(i->getType(), 0), i};
-    Value* ptr = builder.CreateGEP(arr, idxList, name);
+    Value* idxList[1] = {i};
+    Value* ptr = builder.CreateGEP(arr, idxList, name.c_str());
 
     if(rvalue){
-        return builder.CreateLoad(ptr, name.c_str()); 
+        return builder.CreateLoad(ptr, (name + "i").c_str()); 
     }
     else
         return ptr;

@@ -77,7 +77,7 @@ BlockNode* Block(std::string name) {
     DeclarationPart(blockStam);
     Statm* result = StatmentPart(blockStam);
     setCurrentSymbolTable(blockEnv->parentTable);
-    return new BlockNode(blockEnv, result);
+    return new BlockNode(name, blockEnv, result);
 }
 
 void DeclarationPart(StatmList* block) {

@@ -28,8 +28,8 @@ class BlockNode : public Node {
     SymbolTableMap* SymbolTable;
     Statm* statmList;
 public:
-    BlockNode(SymbolTableMap* stm, Statm* stml) : SymbolTable(stm), 
-                                              statmList(stml){}
+    std::string name;
+    BlockNode(std::string, SymbolTableMap*, Statm*);
     SymbolTableMap* getSymbolTable(){ return SymbolTable;}
     virtual ~BlockNode();
     virtual void Translate(int i);

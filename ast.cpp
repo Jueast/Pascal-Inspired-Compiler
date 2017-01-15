@@ -8,7 +8,9 @@ const std::string OpNames[] =
 {
     "+", "-", "*", "/", "mod", "<", ">", "=", "<>", "<=", ">=", "err"
 };
-
+BlockNode::BlockNode(std::string s, SymbolTableMap* st, Statm* sl){
+    name = s; SymbolTable = st, statmList = sl;
+}
 void BlockNode::Translate(int i){
     SymbolTableMap* previous = getCurrentSymbolTable();
     setCurrentSymbolTable(SymbolTable);
