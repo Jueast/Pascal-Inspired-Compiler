@@ -210,18 +210,19 @@ Statm* Statment(void){
 }
 
 Statm* For(){
+    StatmList* block = new StatmList();
     Symb = readLexem();
     std::string name = Compare(IDENT).ident;
     Compare(ASSIGN);
     Expr* init = Expression();
     Statm* initstat = new Assign(new Var(name, false), init);
+    block->add(initstat);
     int step = Symb.type == kwTO ? 1 : -1;
     Symb = readLexem();
     Expr* fin = Expression();
     BinOp* cond = new BinOp(Neq, new BinOp(Sub, new Var(name, true), new IntConst(step)), fin);
     Compare(kwDO);
     StatmList* body = new StatmList();
-    body->add(initstat);
     if(Symb.type == kwBEGIN){
         Symb = readLexem();
         body = StatmentSequence(body);
@@ -231,7 +232,8 @@ Statm* For(){
     } else 
         body->add(Statment());
     body->add(new Assign(new Var(name, false), new BinOp(Add, new Var(name, true), new IntConst(step))));
-    return new While(cond, body);
+    block->add(new While(cond, body));
+    return block;
 }
 
 Statm* ElsePart() {

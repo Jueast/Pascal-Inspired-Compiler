@@ -367,10 +367,17 @@ Value* While::codegen() {
     return nullptr; 
 }
 Value* Break::codegen(){
+    Function* theFunction = builder.GetInsertBlock()->getParent();
+    BasicBlock* breakBB = BasicBlock::Create(getGlobalContext(), "break", theFunction);
+     BasicBlock* aftBreakBB = BasicBlock::Create(getGlobalContext(), "aftbreak");
+    builder.CreateBr(breakBB);
+    builder.SetInsertPoint(breakBB);
     if(breakTarget){
-        return builder.CreateBr(breakTarget);
+        builder.CreateBr(breakTarget);
     }
-    else return nullptr;
+    theFunction->getBasicBlockList().push_back(aftBreakBB);
+    builder.SetInsertPoint(aftBreakBB);
+    return nullptr;
 }
 Value* Assign::codegen(){
     Value* V = NamedValues[var->name];
