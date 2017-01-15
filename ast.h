@@ -71,7 +71,8 @@ public:
     void Translate(int i);
 };
 class Break: public Statm {
-        virtual void Translate(int i) {}
+public:
+        virtual void Translate(int i);
 #ifndef LOCAL_SFE_TEST
         virtual llvm::Value* codegen();
 #endif

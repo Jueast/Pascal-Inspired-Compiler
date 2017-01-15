@@ -183,6 +183,9 @@ Statm* Statment(void){
         case kwFOR:
             return For();
         case kwBREAK:
+            Symb = readLexem();
+            if(Symb.type == SEMICOLON)
+                Symb = readLexem();
             return new Break();
         case IDENT: {
             Statm* result = NULL; 

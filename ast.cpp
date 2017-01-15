@@ -136,6 +136,12 @@ void While::Translate(int i){
     std::cout << " DO:" << std::endl;
     body->Translate(i+1);
 }
+void Break::Translate(int i){
+    for(int j = 0; i != j; j++)
+        std::cout << "    ";
+    std::cout<< "BREAK" << std::endl;
+}
+
 StatmList::StatmList() {
 
 }

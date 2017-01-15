@@ -16,7 +16,7 @@ const char *symbTable[50] = {
     "kwBEGIN","kwEND","kwINTEGER","kwIF","kwTHEN","kwELSE",
     "kwARRAY","kwOF",
     "kwWHILE","kwDO","kwWRITE","kwREAD",
-    "kwFOR","kwTO","kwDOWNTO","kwBREAK"
+    "kwFOR","kwTO","kwDOWNTO","kwBREAK",
     "EOI","ERR"
 };
 static int character; // input symbol

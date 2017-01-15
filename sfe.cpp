@@ -170,6 +170,7 @@ IRBuilder<> builder(getGlobalContext());
 Module * module = new Module("Sfe", getGlobalContext());
 Value* writeFormatStr;
 Value* scanfFormatStr;
+BasicBlock* breakTarget;
 static std::map<std::string, AllocaInst*> NamedValues;
 static  AllocaInst* CreateEntryBlockAlloca(Function *TheFunction,
                                         std::string VarName) 
@@ -290,7 +291,7 @@ Value* IntConst::codegen() {
 Value* BinOp::codegen() {
     Value* L = left->codegen();
     Value* R = right->codegen();
-    switch (this.op) {
+    switch (op) {
         case Add:
             return builder.CreateAdd(L, R, ".addtmp");
         case Sub:
@@ -299,6 +300,21 @@ Value* BinOp::codegen() {
             return builder.CreateMul(L, R, ".multmp");
         case Div:
             return builder.CreateSDiv(L, R, ".divtmp");
+        case Mod:
+            return builder.CreateSRem(L, R, ".modtmp");
+        case Eq:
+            return builder.CreateICmpEQ(L, R, ".eqtmp");
+        case Neq:
+            return builder.CreateICmpNE(L, R, ".neqtmp");
+        case Lt:
+            return builder.CreateICmpSLT(L, R, ".lttmp");
+        case Gt:
+            return builder.CreateICmpSGT(L, R, ".gttmp");
+        case Lte:
+            return builder.CreateICmpSLE(L, R, ".ltetmp");
+        case Gte:
+            return builder.CreateICmpSGE(L, R, ".gtetmp");
+                    
         default:
             LogError("Errors in BinOp code genearting! Wrong OP!\n ");
             return nullptr;
@@ -308,6 +324,53 @@ Value* BinOp::codegen() {
 Value* UnMinus::codegen() {
     Value* E = expr->codegen();
     return builder.CreateNeg(E, ".negtmp");
+}
+Value* If::codegen() {
+    Value* condV = cond->codegen();
+    if(!condV)
+        return nullptr;
+    Function* theFunction = builder.GetInsertBlock()->getParent();
+    BasicBlock* ThenBB = BasicBlock::Create(getGlobalContext(), "then", theFunction);
+    BasicBlock* ElseBB = BasicBlock::Create(getGlobalContext(), "else");
+    BasicBlock* MergeBB = BasicBlock::Create(getGlobalContext(), "ifcont");
+
+    builder.CreateCondBr(condV, ThenBB, ElseBB);
+    builder.SetInsertPoint(ThenBB);
+    thenstm->codegen();
+    builder.CreateBr(MergeBB);
+    theFunction->getBasicBlockList().push_back(ElseBB);
+    builder.SetInsertPoint(ElseBB);
+    if(elsestm){
+        elsestm->codegen();
+    }
+    builder.CreateBr(MergeBB);
+    theFunction->getBasicBlockList().push_back(MergeBB);
+    builder.SetInsertPoint(MergeBB);
+    return nullptr; 
+}
+
+Value* While::codegen() {
+    Value* condV = cond->codegen();
+    Function* theFunction = builder.GetInsertBlock()->getParent();
+    BasicBlock* LoopBB = BasicBlock::Create(getGlobalContext(), "loop", theFunction);
+    BasicBlock* aftLoopBB = BasicBlock::Create(getGlobalContext(), "aft");
+    BasicBlock* previousTarget = breakTarget;
+    breakTarget = aftLoopBB;
+    builder.CreateCondBr(condV, LoopBB, aftLoopBB);
+    builder.SetInsertPoint(LoopBB);
+    body->codegen();
+    condV = cond->codegen();
+    builder.CreateCondBr(condV, LoopBB, aftLoopBB);
+    theFunction->getBasicBlockList().push_back(aftLoopBB);
+    breakTarget = previousTarget;
+    builder.SetInsertPoint(aftLoopBB);
+    return nullptr; 
+}
+Value* Break::codegen(){
+    if(breakTarget){
+        return builder.CreateBr(breakTarget);
+    }
+    else return nullptr;
 }
 Value* Assign::codegen(){
     Value* V = NamedValues[var->name];
