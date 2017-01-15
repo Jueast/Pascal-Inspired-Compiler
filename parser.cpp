@@ -9,7 +9,7 @@
 
 BlockNode* Program(void);
 std::string ProgramHead(void);
-BlockNode* Block(std::string);
+BlockNode* mainBlock(std::string);
 void DeclarationPart(StatmList*);
 void ConstDeclarationPart(void);
 void VarDeclarationPart(StatmList*);
@@ -53,7 +53,7 @@ LexicalSymbol Compare(LexSymbolType s) {
 BlockNode* Program(void) {
     /* Program -> ProgramHead Block */
     std::string returnName = ProgramHead();
-    BlockNode* result = Block(returnName);
+    BlockNode* result = mainBlock(returnName);
     Compare(DOT);
     return result;
 }
@@ -67,16 +67,14 @@ std::string ProgramHead() {
     return result;
 }
 
-BlockNode* Block(std::string name) {
+BlockNode* mainBlock(std::string name) {
     /* Block -> DeclarationPart StatmentPart */
-    SymbolTableMap* blockEnv = new SymbolTableMap();
+    SymbolTableMap* blockEnv = getGlobalSymbolTable();
     StatmList* blockStam = new StatmList();
-    blockEnv->parentTable = getCurrentSymbolTable();
     setCurrentSymbolTable(blockEnv);
     declVar("Integer", name);
     DeclarationPart(blockStam);
     Statm* result = StatmentPart(blockStam);
-    setCurrentSymbolTable(blockEnv->parentTable);
     return new BlockNode(name, blockEnv, result);
 }
 

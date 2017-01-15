@@ -22,8 +22,6 @@ int main(int argc, char *argv[]) {
     }
     res = Program();
     res->Translate(0);
-    printf("-------------Symbol Table(Block)---------------\n");
-    outputTab(res->getSymbolTable());
     printf("-------------Symbol Table(Glogal)--------------\n");
     outputTab(getGlobalSymbolTable());
     printf("\n---------------End------------------\n");

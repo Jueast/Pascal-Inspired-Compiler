@@ -19,7 +19,7 @@ void TabElement::output(){
     }
     std::cout << stype << " " << var.type 
               << " " << var.name << ": " 
-              << value.integer << std::endl;
+              << symbol_type == Const ? value.integer : 0 << std::endl;
 }
 static SymbolTableMap* CurrentSymbolTable = new SymbolTableMap();
 static SymbolTableMap* GlobalSymbolTable = CurrentSymbolTable;
