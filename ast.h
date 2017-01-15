@@ -3,6 +3,7 @@
 #endif
 #include <vector>
 #include <string>
+#include "tabsym.h"
 #ifndef _NODE_
 #define _NODE_
 enum Op {
@@ -23,7 +24,19 @@ class Expr : public Node {
 
 class Statm : public Node {
 };
-
+class BlockNode : public Node {
+    SymbolTableMap* SymbolTable;
+    Statm* statmList;
+public:
+    BlockNode(SymbolTableMap* stm, Statm* stml) : SymbolTable(stm), 
+                                              statmList(stml){}
+    SymbolTableMap* getSymbolTable(){ return SymbolTable;}
+    virtual ~BlockNode();
+    virtual void Translate(int i);
+#ifndef LOCAL_SFE_TEST
+    virtual llvm::Value* codegen();
+#endif
+};
 class IntConst : public Expr {
     int val;
 public:

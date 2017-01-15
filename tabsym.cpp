@@ -1,18 +1,8 @@
 #include "tabsym.h"
 #include <string>
 #include <iostream>
-#include <map>
 #include <vector>
-struct TabElement {
-    SymbolType symbol_type;
-    Variable var;
-    VariableValue value;
-    TabElement(){};
-    TabElement(SymbolType s, Variable var, VariableValue value) 
-            : symbol_type(s), var(var), value(value){};
-    void output();
-};
-
+#include <map>
 void TabElement::output(){
     std::string stype;
     switch(symbol_type){
@@ -29,26 +19,35 @@ void TabElement::output(){
               << " " << var.name << ": " 
               << value.integer << std::endl;
 }
-
-static std::map<std::string, TabElement> SymbolTable;
-
+static SymbolTableMap* CurrentSymbolTable = new SymbolTableMap();
+static SymbolTableMap* GlobalSymbolTable = CurrentSymbolTable;
 static void error(std::string id, std::string text) {
     std::cout << "identifier " << id << ": " << text << std::endl;
 }
-
-void freeSymbTab() {
-    SymbolTable.clear();
+void setCurrentSymbolTable(SymbolTableMap *s){
+    CurrentSymbolTable = s;
+}
+SymbolTableMap* getGlobalSymbolTable() {
+    return GlobalSymbolTable;
+}
+SymbolTableMap* getCurrentSymbolTable() {
+    return CurrentSymbolTable;
+}
+void freeSymbTab(SymbolTableMap* SymbolTable) {
+    SymbolTable->table.clear();
 }
 
-void outputTab(){
-    for(auto it = SymbolTable.begin(); it != SymbolTable.end(); it++){
+void outputTab(SymbolTableMap* SymbolTable){
+    if(!SymbolTable)
+        SymbolTable = getCurrentSymbolTable();
+    for(auto it = SymbolTable->table.begin(); it != SymbolTable->table.end(); it++){
         it->second.output();
     }
 }
 
 void declConstInt(std::string id, int val) {
-    auto it = SymbolTable.find(id);
-    if(it != SymbolTable.end()) {
+    auto it = CurrentSymbolTable->table.find(id);
+    if(it != CurrentSymbolTable->table.end()) {
         error(id, "is declared again.");
         return;
     }
@@ -58,12 +57,12 @@ void declConstInt(std::string id, int val) {
     var.type = "Integer";
     var.name = id;
     TabElement t(Const, var, vval);
-    SymbolTable[id] = t;
+    (CurrentSymbolTable->table)[id] = t;
 }
 
 void declConstFloat(std::string id, double val) {
-    auto it = SymbolTable.find(id);
-    if(it != SymbolTable.end()) {
+    auto it = CurrentSymbolTable->table.find(id);
+    if(it != CurrentSymbolTable->table.end()) {
         error(id, "is declared again.");
         return;
     }
@@ -73,12 +72,12 @@ void declConstFloat(std::string id, double val) {
     var.type = "Float";
     var.name = id;
     TabElement t(Const, var, vval);
-    SymbolTable[id] = t;
+    (CurrentSymbolTable->table)[id] = t;
 }
 
 void declVar(std::string type, std::string name) {
-    auto it = SymbolTable.find(name);
-    if(it != SymbolTable.end()) {
+    auto it = CurrentSymbolTable->table.find(name);
+    if(it != CurrentSymbolTable->table.end()) {
         error(name, "is declared again.");
         return;
     }
@@ -87,25 +86,28 @@ void declVar(std::string type, std::string name) {
     var.name = name;
     VariableValue vval;
     TabElement t(VarId, var, vval);
-    SymbolTable[name] = t;
+    (CurrentSymbolTable->table)[name] = t;
 }
 
-SymbolType checkSymbolType(std::string id, int* v){
-   auto it = SymbolTable.find(id);
-   if(it != SymbolTable.end()){
+SymbolType checkSymbolType(SymbolTableMap* SymbolTable, std::string id, int* v){
+   auto it = SymbolTable->table.find(id);
+   if(it != SymbolTable->table.end()){
         if(v)
             *v = it->second.value.integer;
         return it->second.symbol_type;
    }
-   error(id, "is not declared.");
+   if(!SymbolTable->parentTable)
+        error(id, "is not declared.");
+   else 
+        return checkSymbolType(SymbolTable->parentTable, id, v);
    return Undef;
 
 }
 
-std::vector<Variable> VarNames(void){ 
+std::vector<Variable> VarNames(SymbolTableMap* SymbolTable){ 
     std::vector<Variable> vars;
-    for(auto it = SymbolTable.begin(); 
-        it != SymbolTable.end(); it++){
+    for(auto it = SymbolTable->table.begin(); 
+        it != SymbolTable->table.end(); it++){
         if(it->second.symbol_type == VarId){
             vars.push_back(it->second.var);
         }

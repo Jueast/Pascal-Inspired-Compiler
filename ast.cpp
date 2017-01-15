@@ -8,6 +8,18 @@ const std::string OpNames[] =
 {
     "+", "-", "*", "/", "mod", "<", ">", "=", "<>", "<=", ">=", "err"
 };
+
+void BlockNode::Translate(int i){
+    SymbolTableMap* previous = getCurrentSymbolTable();
+    setCurrentSymbolTable(SymbolTable);
+    statmList->Translate(i);
+    setCurrentSymbolTable(previous);
+
+}
+BlockNode::~BlockNode(){
+    delete SymbolTable;
+    delete statmList;
+}
 Var::Var(std::string n, bool rv){
     name = n; rvalue = rv;
 }
@@ -55,7 +67,7 @@ UnMinus::~UnMinus() {
 void Assign::Translate(int i) {
     for(int j =0; i != j; j++)
             std::cout << "    ";
-    if (checkSymbolType(var->name, NULL) != VarId) {
+    if (checkSymbolType(getCurrentSymbolTable(), var->name, NULL) != VarId) {
         std::cout << "Erro Assign to ";
         var->Translate(i);
         std::cout << std::endl;
@@ -168,7 +180,7 @@ void StatmList::Translate(int i){
 
 Expr* VarOrConst(std::string id){
     int v;
-    SymbolType st = checkSymbolType(id, &v);
+    SymbolType st = checkSymbolType(getCurrentSymbolTable(), id, &v);
     switch(st){
         case VarId:
             return new Var(id, true);

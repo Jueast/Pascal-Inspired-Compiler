@@ -6,7 +6,7 @@
 
 int main(int argc, char *argv[]) {
     char *fileName;
-    Node *res;
+    BlockNode *res;
     printf("Evaluation of an expression by traversing an abstract syntax tree.\n");
     if (argc == 1) {
         printf("Input from keyboard, write the source code terminated by a dot");
@@ -22,8 +22,10 @@ int main(int argc, char *argv[]) {
     }
     res = Program();
     res->Translate(0);
-    printf("-------------Symbol Table---------------\n");
-    outputTab();
+    printf("-------------Symbol Table(Block)---------------\n");
+    outputTab(res->getSymbolTable());
+    printf("-------------Symbol Table(Glogal)--------------\n");
+    outputTab(getGlobalSymbolTable());
     printf("\n---------------End------------------\n");
     return 0;
 }

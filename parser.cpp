@@ -7,13 +7,13 @@
 #include <iostream>
 #include <vector>
 
-StatmList* Program(void);
-void ProgramHead(void);
-StatmList* Block(void);
-void DeclarationPart(void);
+BlockNode* Program(void);
+std::string ProgramHead(void);
+BlockNode* Block(std::string);
+void DeclarationPart(StatmList*);
 void ConstDeclarationPart(void);
-void VarDeclarationPart(void);
-StatmList* StatmentPart(void);
+void VarDeclarationPart(StatmList*);
+StatmList* StatmentPart(StatmList*);
 StatmList* StatmentSequence(StatmList* init);
 Statm* Statment(void);
 Statm* For(void);
@@ -50,38 +50,49 @@ LexicalSymbol Compare(LexSymbolType s) {
     return Symb; // Add to pass static analysis.
 }
 
-StatmList* Program(void) {
+BlockNode* Program(void) {
     /* Program -> ProgramHead Block */
-    ProgramHead();
-    StatmList* result = Block();
+    std::string returnName = ProgramHead();
+    BlockNode* result = Block(returnName);
     Compare(DOT);
     return result;
 }
 
-void ProgramHead() {
+std::string ProgramHead() {
     /* ProgramHead -> program <name> ; */ 
     Compare(kwPROGRAM);
-    std::cout << "Program Name: " << Symb.ident << std::endl;
+    std::string result = Symb.ident;
     Symb = readLexem();
     Compare(SEMICOLON);
+    return result;
 }
 
-StatmList* Block(void) {
+BlockNode* Block(std::string name) {
     /* Block -> DeclarationPart StatmentPart */
-    DeclarationPart();
-    return StatmentPart();
+    SymbolTableMap* blockEnv = new SymbolTableMap();
+    StatmList* blockStam = new StatmList();
+    blockEnv->parentTable = getCurrentSymbolTable();
+    setCurrentSymbolTable(blockEnv);
+    declVar("Integer", name);
+    DeclarationPart(blockStam);
+    Statm* result = StatmentPart(blockStam);
+    setCurrentSymbolTable(blockEnv->parentTable);
+    return new BlockNode(blockEnv, result);
 }
 
-void DeclarationPart() {
+void DeclarationPart(StatmList* block) {
     if(Symb.type == kwCONST){
         Compare(kwCONST);
         ConstDeclarationPart();
     }
     if(Symb.type == kwVAR){
         Compare(kwVAR);
-        VarDeclarationPart();
+        VarDeclarationPart(block);
     }
-    return;
+    if(Symb.type == kwBEGIN)
+        return;
+    else
+        DeclarationPart(block);
 }
 void ConstDeclarationPart() {
    if(Symb.type != IDENT)
@@ -100,7 +111,7 @@ void ConstDeclarationPart() {
    ConstDeclarationPart();
 }
 
-void VarDeclarationPart() {
+void VarDeclarationPart(StatmList* block) {
    if(Symb.type != IDENT)
         return;
    std::vector<std::string> names;
@@ -117,16 +128,22 @@ void VarDeclarationPart() {
         for(auto it = names.begin(); it < names.end(); it++){
             declVar("Integer", *it);
         }
+   }else{}
+   if(Symb.type == EQ){
+        Symb = readLexem();
+        Expr* init = Expression();
+        for(auto it = names.begin(); it < names.end(); it++){
+            block->add(new Assign(new Var(*it, false), init));
+        }
    }
-   else{}
    Compare(SEMICOLON);
-   VarDeclarationPart();
+   VarDeclarationPart(block);
 }
 
-StatmList* StatmentPart(void) {
+StatmList* StatmentPart(StatmList* init) {
     /* StatmentPart ->begin StatmentSequence end.*/
     Compare(kwBEGIN);
-    StatmList* n = StatmentSequence(nullptr);
+    StatmList* n = StatmentSequence(init);
     Compare(kwEND);
     if(Symb.type == SEMICOLON){
         Symb = readLexem();
@@ -162,7 +179,7 @@ Statm* Statment(void){
             Compare(kwTHEN);
             Statm* thenPart;
             if(Symb.type == kwBEGIN)
-                thenPart = StatmentPart();
+                thenPart = StatmentPart(nullptr);
             else
                 thenPart = Statment();
             return new If(cond, thenPart, ElsePart());
@@ -174,7 +191,7 @@ Statm* Statment(void){
             Compare(kwDO);
             Statm* body;
             if(Symb.type == kwBEGIN)
-                body = StatmentPart();
+                body = StatmentPart(nullptr);
             else
                 body = Statment();
             return new While(cond, body);
@@ -191,7 +208,7 @@ Statm* Statment(void){
             Statm* result = NULL; 
             auto id = Compare(IDENT).ident;
             int v;
-            SymbolType st = checkSymbolType(id, &v);
+            SymbolType st = checkSymbolType(getCurrentSymbolTable(), id, &v);
             switch(st){
                     case Const:
                     case VarId:
@@ -241,7 +258,7 @@ Statm* ElsePart() {
     if (Symb.type == kwELSE) {
         Symb = readLexem();
         if(Symb.type == kwBEGIN)
-            elsePart = StatmentPart();
+            elsePart = StatmentPart(nullptr);
         else
             elsePart = Statment();
     }

@@ -181,8 +181,8 @@ static  AllocaInst* CreateEntryBlockAlloca(Function *TheFunction,
                             VarName.c_str());
 }
 
-void GetVariables(){
-    std::vector<Variable> vars = VarNames();
+void GetVariables(SymbolTableMap* sm){
+    std::vector<Variable> vars = VarNames(sm);
     Function *TheFunction = builder.GetInsertBlock()->getParent();
     for(auto it = vars.begin(); it != vars.end(); it++){
         AllocaInst* alloc = CreateEntryBlockAlloca(TheFunction, it->name);
@@ -222,8 +222,8 @@ int main(int argc, char* argv[])
   }
   writeFormatStr = builder.CreateGlobalStringPtr("value = %d\n");
   scanfFormatStr = builder.CreateGlobalStringPtr("%d");
-  Node* res = Program();
-  GetVariables();
+  BlockNode* res = Program();
+  GetVariables(res->getSymbolTable());
   res->codegen();
   Value * returnValue = builder.getInt32(0);
   builder.CreateRet(returnValue);
