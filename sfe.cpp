@@ -168,6 +168,8 @@ int createObjectFile(Module *mod, const char *targetName)
 
 IRBuilder<> builder(getGlobalContext());
 Module * module = new Module("Sfe", getGlobalContext());
+Value* writeFormatStr;
+Value* scanfFormatStr;
 static std::map<std::string, AllocaInst*> NamedValues;
 static  AllocaInst* CreateEntryBlockAlloca(Function *TheFunction,
                                         std::string VarName) 
@@ -217,6 +219,8 @@ int main(int argc, char* argv[])
          printf("Error creating the syntax analyzer.\n");
          return 0;
   }
+  writeFormatStr = builder.CreateGlobalStringPtr("value = %d\n");
+  scanfFormatStr = builder.CreateGlobalStringPtr("%d");
   Node* res = Program();
   GetVariables();
   res->codegen();
@@ -249,7 +253,7 @@ Constant* printFunc() {
 
 Constant* scanfFunc() {
     std::vector<Type *> args;
-    args.push_back(Type::getInt8Ty(getGlobalContext()));
+    args.push_back(Type::getInt8PtrTy(getGlobalContext()));
     FunctionType *scanfType = FunctionType::get(builder.getInt32Ty(), args, true);
     return module->getOrInsertFunction("scanf", scanfType);
 
@@ -314,9 +318,7 @@ Value* Assign::codegen(){
     Value* E = expr->codegen();
     return builder.CreateStore(E, V);
 }
-
-static Value* writeFormatStr = builder.CreateGlobalStringPtr("value = %d\n"); 
-Value* Write::codegen() {
+Value* Write::codegen() { 
     Value* E = expr->codegen();
     std::vector<llvm::Value *> values;
     values.push_back(writeFormatStr);
@@ -324,7 +326,6 @@ Value* Write::codegen() {
     return builder.CreateCall(printFunc(), values);
 }
 
-static Value* scanfFormatStr = builder.CreateGlobalStringPtr("%d");
 Value* Read::codegen(){
     Value* V = NamedValues[var->name];
     if(!V){
