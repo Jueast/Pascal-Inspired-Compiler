@@ -1,6 +1,7 @@
 #include "parser.h"
 #include "ast.h"
 #include "lexan.h"
+#include "tabsym.h"
 #include <stdlib.h>
 #include <string>
 #include <iostream>
@@ -10,6 +11,8 @@ StatmList* Program(void);
 void ProgramHead(void);
 StatmList* Block(void);
 void DeclarationPart(void);
+void ConstDeclarationPart(void);
+void VarDeclarationPart(void);
 StatmList* StatmentPart(void);
 StatmList* StatmentSequence(void);
 Statm* Statment(void); // Only Write Now...
@@ -63,7 +66,54 @@ StatmList* Block(void) {
 }
 
 void DeclarationPart() {
+    if(Symb.type == kwCONST){
+        Compare(kwCONST);
+        ConstDeclarationPart();
+    }
+    if(Symb.type == kwVAR){
+        Compare(kwVAR);
+        VarDeclarationPart();
+    }
     return;
+}
+void ConstDeclarationPart() {
+   if(Symb.type != IDENT)
+        return;
+   std::string name = Symb.ident;
+   Compare(IDENT);
+   Compare(COLON);
+   if(Symb.type == kwINTEGER){
+        Compare(kwINTEGER);
+        Compare(EQ);
+        int value = Compare(INTEGER).value;
+        declConstInt(name, value);
+        Compare(SEMICOLON);
+   }
+   else{}
+   ConstDeclarationPart();
+}
+
+void VarDeclarationPart() {
+   if(Symb.type != IDENT)
+        return;
+   std::vector<std::string> names;
+   names.push_back(Symb.ident);
+   Compare(IDENT);
+   while(Symb.type != COLON){
+        Compare(COMMA);
+        LexicalSymbol id = Compare(IDENT);
+        names.push_back(id.ident);
+   }
+   Compare(COLON);
+   if(Symb.type == kwINTEGER){
+        Compare(kwINTEGER);
+        for(auto it = names.begin(); it < names.end(); it++){
+            declVar("Integer", *it);
+        }
+   }
+   else{}
+   Compare(SEMICOLON);
+   VarDeclarationPart();
 }
 
 StatmList* StatmentPart(void) {
@@ -90,6 +140,27 @@ Statm* Statment(void){
             Compare(SEMICOLON);
             return new Write(n);
         }
+        case kwREAD: {
+            Symb = readLexem();
+            auto id = Compare(IDENT);
+            Compare(SEMICOLON);
+            return new Read(new Var(id.ident, false));     
+        }
+        case IDENT: {
+            Statm* result = NULL; 
+            auto id = Compare(IDENT).ident;
+            int v;
+            SymbolType st = checkSymbolType(id, &v);
+            switch(st){
+                    case VarId:
+                        Compare(ASSIGN);
+                        result = new Assign(new Var(id, false), Expression());
+                    case Func:
+                    default:break;
+            }
+            Compare(SEMICOLON);
+            return result; 
+     }
         default:
             ExpansionError("Statment", Symb.type);
             return nullptr;
@@ -140,6 +211,11 @@ Expr* TermPrime(Expr * l) {
 
 Expr* Factor(){
     switch (Symb.type) {
+        case IDENT: {
+            std::string id = Symb.ident;
+            Symb = readLexem();
+            return VarOrConst(id);
+        }
         case LPAR:{ 
             Symb = readLexem();
             Expr* e = Expression();

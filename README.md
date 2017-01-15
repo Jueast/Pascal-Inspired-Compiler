@@ -30,7 +30,6 @@ Comments begin with `{`, and end with `}`.
     SEMICOLON       ;
     COLON           :
     DOT             .
-    kwARRAY         array|ARRAY
     kwPROGRAM       program|PROGRAM
     kwFUNCTION      function|FUNCTION
     kwCONST         const|CONST
@@ -41,9 +40,11 @@ Comments begin with `{`, and end with `}`.
     kwIF            if|IF
     kwTHEN          then|THEN
     kwELSE          else|ELSE
+    kwARRAY         array|ARRAY
+    kwOF            of|OF
     kwWHILE         while|WHILE
     kwDO            do|DO
-    kwWRITELN       writeln|WRITELN
-    kwREADLN        readln|READLN
+    kwWRITE         write|WRITE
+    kwREAD          read|READ
     EOF             EOF
     ERR             * #anything else

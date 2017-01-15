@@ -10,11 +10,13 @@ typedef enum {
     kwPROGRAM, kwFUNCTION, kwVAR, kwCONST, kwBEGIN, kwEND,
     kwINTEGER,
     kwIF, kwTHEN, kwELSE,
+    kwARRAY, kwOF,
     kwWHILE, kwDO, kwWRITE, kwREAD,
+    kwFOR, kwTO, kwDOWNTO, kwBREAK,
     EOI, ERR
  } LexSymbolType;
 
-extern const char *symbTable[40];
+extern const char *symbTable[50];
 
 #define MAX_IDENT_LEN 32
 

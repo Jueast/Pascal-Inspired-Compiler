@@ -1,3 +1,8 @@
+parser
+lexan
+*.sfe
 *.p
 *.o
 *.py
+tags
+
