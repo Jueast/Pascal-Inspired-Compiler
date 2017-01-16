@@ -7,15 +7,26 @@
 #include <iostream>
 #include <vector>
 
-StatmList* Program(void);
-void ProgramHead(void);
-StatmList* Block(void);
-void DeclarationPart(void);
+BlockNode* Program(void);
+std::string ProgramHead(void);
+BlockNode* mainBlock(std::string);
+FunctionNode* FunctionMatch();
+std::vector<Variable> FunctionHead();
+BlockNode* Block(std::vector<Variable>);
+void DeclarationPart(StatmList*);
 void ConstDeclarationPart(void);
-void VarDeclarationPart(void);
-StatmList* StatmentPart(void);
-StatmList* StatmentSequence(void);
-Statm* Statment(void); // Only Write Now...
+void VarDeclarationPart(StatmList*);
+StatmList* StatmentPart(StatmList*);
+StatmList* StatmentSequence(StatmList* init);
+Statm* Statment(void);
+Statm* For(void);
+Expr* LogicExpr(void);
+Expr* LogicExprPrime(Expr*);
+Expr* RelExpr();
+Expr* RelExprPrime(Expr*);
+Statm* ElsePart(void);
+Op LogicOp(void);
+Op RelOp(void);
 Expr* Expression(void);
 Expr* ExpressionPrime(Expr*);
 Expr* Term(void);
@@ -23,9 +34,10 @@ Expr* TermPrime(Expr*);
 Expr* Factor(void);
 
 LexicalSymbol Symb;
-
+static int t =  0;
 void CompareError(LexSymbolType s) { 
-    std::cout << "Error while comparing, expected " << symbTable[s] << std::endl;
+    std::cout << "Error while comparing, expected " << symbTable[s] 
+            << " in " << lineNumber << " line."<< std::endl;
     exit(1);
 }
 
@@ -45,36 +57,62 @@ LexicalSymbol Compare(LexSymbolType s) {
     return Symb; // Add to pass static analysis.
 }
 
-StatmList* Program(void) {
+BlockNode* Program(void) {
     /* Program -> ProgramHead Block */
-    ProgramHead();
-    return Block();
+    std::string returnName = ProgramHead();
+    BlockNode* result = mainBlock(returnName);
+    Compare(DOT);
+    return result;
 }
 
-void ProgramHead() {
+std::string ProgramHead() {
     /* ProgramHead -> program <name> ; */ 
     Compare(kwPROGRAM);
-    std::cout << "Program Name: " << Symb.ident << std::endl;
+    std::string result = Symb.ident;
     Symb = readLexem();
     Compare(SEMICOLON);
+    return result;
 }
 
-StatmList* Block(void) {
+BlockNode* mainBlock(std::string name) {
     /* Block -> DeclarationPart StatmentPart */
-    DeclarationPart();
-    return StatmentPart();
+    SymbolTableMap* blockEnv = getGlobalSymbolTable();
+    StatmList* blockStam = new StatmList();
+    setCurrentSymbolTable(blockEnv);
+    declVar("Integer", name);
+    DeclarationPart(blockStam);
+    Statm* result = StatmentPart(blockStam);
+    return new BlockNode(name, blockEnv, result);
 }
-
-void DeclarationPart() {
+BlockNode* Block(std::vector<Variable> names) {
+    /* Block -> DeclarationPart StatmentPart */
+    SymbolTableMap* blockEnv = new SymbolTableMap();
+    blockEnv->parentTable = getCurrentSymbolTable();
+    StatmList* blockStam = new StatmList();
+    setCurrentSymbolTable(blockEnv);
+    for(auto it = names.begin(); it != names.end(); it++)
+        declVar("Integer", (*it).name);
+    DeclarationPart(blockStam);
+    Statm* result = StatmentPart(blockStam);
+    setCurrentSymbolTable(blockEnv->parentTable);
+    return new BlockNode(names[0].name,blockEnv, result);
+}
+void DeclarationPart(StatmList* block) {
     if(Symb.type == kwCONST){
         Compare(kwCONST);
         ConstDeclarationPart();
     }
     if(Symb.type == kwVAR){
         Compare(kwVAR);
-        VarDeclarationPart();
+        VarDeclarationPart(block);
     }
-    return;
+    if(Symb.type == kwFUNCTION){
+        FunctionMatch();
+    }
+    if(Symb.type == kwBEGIN)
+        return;
+    else
+        DeclarationPart(block);
 }
 void ConstDeclarationPart() {
    if(Symb.type != IDENT)
@@ -93,7 +131,7 @@ void ConstDeclarationPart() {
    ConstDeclarationPart();
 }
 
-void VarDeclarationPart() {
+void VarDeclarationPart(StatmList* block) {
    if(Symb.type != IDENT)
         return;
    std::vector<std::string> names;
@@ -110,26 +148,93 @@ void VarDeclarationPart() {
         for(auto it = names.begin(); it < names.end(); it++){
             declVar("Integer", *it);
         }
+   }else if(Symb.type == kwARRAY) {
+        Symb = readLexem();
+        Compare(LBRA);
+        int sign;
+        if(Symb.type == MINUS){
+            Symb = readLexem();
+            sign = -1;
+        } else sign = 1;
+        int start = Compare(INTEGER).value * sign;
+        Compare(DOT);Compare(DOT);
+        if(Symb.type == MINUS){
+            Symb = readLexem();
+            sign = -1;
+        } else sign = 1;
+        int fin = Compare(INTEGER).value * sign;
+        Compare(RBRA);
+        Compare(kwOF);
+        if(Symb.type == kwINTEGER){
+            Compare(kwINTEGER);
+            for(auto it = names.begin(); it < names.end(); it++)
+                declArrayVar("Integer", *it, (fin-start)+1, start);
+        } else{}
+   } else {}
+   if(Symb.type == EQ){
+        Symb = readLexem();
+        Expr* init = Expression();
+        for(auto it = names.begin(); it < names.end(); it++){
+            block->add(new Assign(new Var(*it, false), init));
+        }
    }
-   else{}
    Compare(SEMICOLON);
-   VarDeclarationPart();
+   VarDeclarationPart(block);
+}
+FunctionNode* FunctionMatch(void){
+    std::vector<Variable> proto = FunctionHead();
+    BlockNode* bn = Block(proto);
+    FunctionNode* r = new FunctionNode(proto[0].name, proto, bn);
+    declFunc(proto[0].name, proto[0].type, (void *)r, t++);
+    return r;
+}
+std::vector<Variable> FunctionHead(void){
+    Compare(kwFUNCTION);
+    std::string name = Compare(IDENT).ident;
+    Compare(LPAR);
+    std::vector<Variable> proto;
+    proto.push_back(Variable());
+    proto[0].name = name;
+    while (Symb.type != RPAR){
+        Variable para;
+        para.name = Compare(IDENT).ident;
+        Compare(COLON);
+        if(Symb.type == kwINTEGER)
+            para.type = "Integer";
+        else
+            para.type = "Unknown";
+        Symb = readLexem();
+        if(Symb.type == SEMICOLON)
+            Compare(SEMICOLON);
+        proto.push_back(para);
+    }
+    Compare(RPAR);Compare(COLON);
+    if(Symb.type == kwINTEGER)
+            proto[0].type = "Integer";
+        else
+            proto[0].type = "Unknown";
+    Symb = readLexem();
+    Compare(SEMICOLON);
+    return proto;
 }
 
-StatmList* StatmentPart(void) {
+StatmList* StatmentPart(StatmList* init) {
     /* StatmentPart ->begin StatmentSequence end.*/
     Compare(kwBEGIN);
-    StatmList* n = StatmentSequence();
+    StatmList* n = StatmentSequence(init);
     Compare(kwEND);
-    Compare(DOT);
+    if(Symb.type == SEMICOLON){
+        Symb = readLexem();
+    }
     return n;
 }
-StatmList* StatmentSequence(void) {
-    StatmList* sl = new StatmList();
+StatmList* StatmentSequence(StatmList * init) {
+    if(!init)
+        init = new StatmList();
     while(Symb.type != kwEND){
-        sl->add(Statment());
+        init->add(Statment());
     }
-    return sl;
+    return init;
 }
 
 Statm* Statment(void){
@@ -146,17 +251,64 @@ Statm* Statment(void){
             Compare(SEMICOLON);
             return new Read(new Var(id.ident, false));     
         }
+        case kwIF: {
+            Symb = readLexem();
+            Expr *cond = LogicExpr();
+            Compare(kwTHEN);
+            Statm* thenPart;
+            if(Symb.type == kwBEGIN)
+                thenPart = StatmentPart(nullptr);
+            else
+                thenPart = Statment();
+            return new If(cond, thenPart, ElsePart());
+        }
+        case kwWHILE: {
+            Expr *cond;
+            Symb = readLexem();
+            cond = LogicExpr();
+            Compare(kwDO);
+            Statm* body;
+            if(Symb.type == kwBEGIN)
+                body = StatmentPart(nullptr);
+            else
+                body = Statment();
+            return new While(cond, body);
+
+        }
+        case kwFOR:
+            return For();
+        case kwBREAK:
+            Symb = readLexem();
+            if(Symb.type == SEMICOLON)
+                Symb = readLexem();
+            return new Break();
         case IDENT: {
             Statm* result = NULL; 
             auto id = Compare(IDENT).ident;
-            int v;
-            SymbolType st = checkSymbolType(id, &v);
-            switch(st){
-                    case VarId:
+            switch(Symb.type){
+                    case LBRA:{
+                        Symb = readLexem();
+                        Expr* index = Expression();
+                        Compare(RBRA);
+                        VarInArray* v = ArrayAccess(id, index, false);
+                        Compare(ASSIGN);
+                        result = new Assign(v, Expression());
+                        break; 
+                    }
+                    case LPAR:{
+                        Symb = readLexem();
+                        std::vector<Expr*> args;
+                        while (Symb.type != RPAR){
+                            args.push_back(Expression());
+                        }
+                        Compare(RPAR);
+                        result = CallFunc(id, args);
+                        break;
+                    }
+                    default:
                         Compare(ASSIGN);
                         result = new Assign(new Var(id, false), Expression());
-                    case Func:
-                    default:break;
+                        break;
             }
             Compare(SEMICOLON);
             return result; 
@@ -165,6 +317,107 @@ Statm* Statment(void){
             ExpansionError("Statment", Symb.type);
             return nullptr;
     }
+}
+
+Statm* For(){
+    StatmList* block = new StatmList();
+    Symb = readLexem();
+    std::string name = Compare(IDENT).ident;
+    Compare(ASSIGN);
+    Expr* init = Expression();
+    Statm* initstat = new Assign(new Var(name, false), init);
+    block->add(initstat);
+    int step = Symb.type == kwTO ? 1 : -1;
+    Symb = readLexem();
+    Expr* fin = Expression();
+    BinOp* cond = new BinOp(Neq, new BinOp(Sub, new Var(name, true), new IntConst(step)), fin);
+    Compare(kwDO);
+    StatmList* body = new StatmList();
+    if(Symb.type == kwBEGIN){
+        Symb = readLexem();
+        body = StatmentSequence(body);
+        Compare(kwEND);
+        if(Symb.type == SEMICOLON)
+            Symb = readLexem();
+    } else 
+        body->add(Statment());
+    body->add(new Assign(new Var(name, false), new BinOp(Add, new Var(name, true), new IntConst(step))));
+    block->add(new While(cond, body));
+    return block;
+}
+
+Statm* ElsePart() {
+    Statm* elsePart = nullptr;
+    if (Symb.type == kwELSE) {
+        Symb = readLexem();
+        if(Symb.type == kwBEGIN)
+            elsePart = StatmentPart(nullptr);
+        else
+            elsePart = Statment();
+    }
+    return elsePart;
+}
+Expr *LogicExpr() {
+    return LogicExprPrime(RelExpr());
+}
+Expr *LogicExprPrime(Expr* b){
+    Op o;
+    if((o = LogicOp()) != Error){
+        return LogicExprPrime(new BinOp(o, b, RelExpr()));
+    }
+    else
+        return b;
+}
+Expr *RelExpr() {
+    return RelExprPrime(Expression());
+}
+Expr *RelExprPrime(Expr* b){
+    Op o;
+    if((o = RelOp()) != Error){
+        return RelExprPrime(new BinOp(o, b, Expression()));
+    }
+    return b;
+}
+Op LogicOp(){
+    switch(Symb.type){
+        case kwAND:
+            Symb = readLexem();
+            return And;
+        case kwOR:
+            Symb = readLexem();
+            return Or;
+        case kwNOT:
+            Symb = readLexem();
+            return Not;
+        default:
+            return Error;
+    }
+}
+Op RelOp() {
+    switch(Symb.type) {
+        case EQ:
+            Symb = readLexem();
+            return Eq;
+        case NEQ:
+            Symb = readLexem();
+            return Neq;
+        case LT:
+            Symb = readLexem();
+            return Lt;
+        case GT:
+            Symb = readLexem();
+            return Gt;
+        case LTE:
+            Symb = readLexem();
+            return Lte;
+        case GTE:
+            Symb = readLexem();
+            return Gte;
+        default:
+            return Error;
+    
+    }
+
 }
 Expr* Expression(void) {
     /* E -> T E' */
@@ -178,12 +431,12 @@ Expr* ExpressionPrime(Expr* l) {
             /* E'-> + T E' */
             Symb = readLexem();
 //            printf(" E' -> + T E'\n");
-            return ExpressionPrime(new BinOp('+', l, Term()));
+            return ExpressionPrime(new BinOp(Add, l, Term()));
         case MINUS:
             /* E'-> - T E' */
             Symb = readLexem();
 //            printf(" E' -> - T E'\n");
-            return ExpressionPrime(new BinOp('-', l, Term()));
+            return ExpressionPrime(new BinOp(Sub, l, Term()));
         default:
             return l;
     }
@@ -198,11 +451,14 @@ Expr* TermPrime(Expr * l) {
         case TIMES:
             Symb = readLexem();
 //            printf(" T' -> * F T' \n");
-            return TermPrime(new BinOp('*', l, Factor()));
+            return TermPrime(new BinOp(Mult, l, Factor()));
         case DIVIDE:
             Symb = readLexem();
 //            printf(" T' -> / F T'\n");
-            return TermPrime(new BinOp('/', l, Factor()));
+            return TermPrime(new BinOp(Div, l, Factor()));
+        case kwMOD:
+            Symb = readLexem();
+            return TermPrime(new BinOp(Mod, l, Factor()));
         default:
             return l;
 
@@ -214,11 +470,31 @@ Expr* Factor(){
         case IDENT: {
             std::string id = Symb.ident;
             Symb = readLexem();
-            return VarOrConst(id);
+            switch(Symb.type){
+                case LBRA:{
+                    Symb = readLexem();
+                    Expr* index = Expression();
+                    Compare(RBRA);
+                    return ArrayAccess(id, index, true); 
+                }
+                case LPAR:{
+                    Symb = readLexem();
+                        std::vector<Expr*> args;
+                        while (Symb.type != RPAR){
+                            args.push_back(Expression());
+                            if(Symb.type == COMMA)
+                                Symb = readLexem();
+                        }
+                        Compare(RPAR);
+                        return CallFunc(id, args);
+           
+                }
+                default: return VarOrConst(id);
+            }
         }
         case LPAR:{ 
             Symb = readLexem();
-            Expr* e = Expression();
+            Expr* e = LogicExpr();
             Compare(RPAR);
             return e;
         }

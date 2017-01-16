@@ -1,3 +1,4 @@
 #include "ast.h"
-StatmList* Program();
+BlockNode* Program();
+extern int lineNumber;
 int initParser(char*);

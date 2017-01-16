@@ -25,3 +25,4 @@ lexan: $(LEXAN_OBJECTS)
 	
 parser: $(PARSER_OBJECTS)
 	$(CC) $(CPPFLAGS) -o parser $(PARSER_SOURCES)
+	rm *.o
