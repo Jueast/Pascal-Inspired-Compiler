@@ -10,6 +10,7 @@ typedef struct Variable{
 union VariableValue {
     int integer;
     double floating;
+    void* ptr;
 };
 
 enum SymbolType {Undef, VarId, Const, Func, ArrayVar};
@@ -40,9 +41,8 @@ void declConstInt(std::string, int);
 void declConstFloat(std::string, float);
 void declVar(std::string, std::string);
 void declArrayVar(std::string, std::string, int size, int bias);
-void declFunc(std::string FnName, std::string type, std::vector<Variable> Args);
+void declFunc(std::string FnName, std::string type, void* FunNode);
 SymbolType checkSymbolType(SymbolTableMap*, std::string, int* v);
 const TabElement* getTabElement(SymbolTableMap*, std::string);
 std::vector<TabElement> VarNames(SymbolTableMap*);
-
-
+std::vector<TabElement> FunNames(SymbolTableMap*);

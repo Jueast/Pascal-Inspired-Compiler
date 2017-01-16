@@ -7,7 +7,7 @@
 #ifndef _NODE_
 #define _NODE_
 enum Op {
-    Add, Sub, Mult, Div,Mod,Lt, Gt, Eq, Neq, Lte, Gte, Error
+    Add, Sub, Mult, Div,Mod,Lt, Gt, Eq, Neq, Lte, Gte,And, Or, Not, Error
 };
 class Node {
 public:
@@ -24,6 +24,7 @@ class Expr : public Node {
 
 class Statm : public Node {
 };
+
 class BlockNode : public Node {
     SymbolTableMap* SymbolTable;
     Statm* statmList;
@@ -31,12 +32,37 @@ public:
     std::string name;
     BlockNode(std::string, SymbolTableMap*, Statm*);
     SymbolTableMap* getSymbolTable(){ return SymbolTable;}
+    Statm* getStatmList() {return statmList;}
     virtual ~BlockNode();
     virtual void Translate(int i);
 #ifndef LOCAL_SFE_TEST
     virtual llvm::Value* codegen();
 #endif
 };
+class FunctionNode : public Node {
+    BlockNode* FuncEnvAndBody;
+public:
+    std::vector<Variable> FuncProto; // First one is the function type and name;
+    std::string name;
+    FunctionNode(std::string, std::vector<Variable>, BlockNode*);
+    SymbolTableMap* getSymbolTable(){ return FuncEnvAndBody->getSymbolTable();}
+    virtual ~FunctionNode();
+    virtual void Translate(int i);
+#ifndef LOCAL_SFE_TEST
+    virtual llvm::Value* codegen();
+#endif
+};
+class CallNode : public Statm, public Expr {
+    std::vector<Expr*> args;
+public:
+    std::string name;
+    CallNode(std::string, std::vector<Expr*>);
+    virtual void Translate(int i);
+#ifndef LOCAL_SFE_TEST
+    virtual llvm::Value* codegen();
+#endif
+
+}; 
 class IntConst : public Expr {
     int val;
 public:
@@ -189,4 +215,6 @@ public:
 
 Expr* VarOrConst(std::string id);
 VarInArray* ArrayAccess(std::string, Expr*, bool);
+CallNode* CallFunc(std::string, std::vector<Expr*>);
+
 #endif

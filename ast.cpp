@@ -1,12 +1,13 @@
 #include "ast.h"
 #include "tabsym.h"
+
 #include <new>
 #include <vector>
 #include <string>
 #include <iostream>
 const std::string OpNames[] = 
 {
-    "+", "-", "*", "/", "mod", "<", ">", "=", "<>", "<=", ">=", "err"
+    "+", "-", "*", "/", "mod", "<", ">", "=", "<>", "<=", ">=","&&","||","~","err"
 };
 BlockNode::BlockNode(std::string s, SymbolTableMap* st, Statm* sl){
     name = s; SymbolTable = st, statmList = sl;
@@ -14,13 +15,57 @@ BlockNode::BlockNode(std::string s, SymbolTableMap* st, Statm* sl){
 void BlockNode::Translate(int i){
     SymbolTableMap* previous = getCurrentSymbolTable();
     setCurrentSymbolTable(SymbolTable);
-    statmList->Translate(i);
+    std::vector<TabElement> funcs = FunNames(SymbolTable);
+    for(auto it = funcs.begin(); it != funcs.end(); it++){
+        FunctionNode* f = (FunctionNode* )it->value.ptr;
+        f->Translate(i);
+    }
+    std::cout << "BEGIN" << std::endl;
+    statmList->Translate(i+1);
+    std::cout << "END" << std::endl;
     setCurrentSymbolTable(previous);
 
 }
 BlockNode::~BlockNode(){
     delete SymbolTable;
     delete statmList;
+}
+
+FunctionNode::FunctionNode(std::string s, std::vector<Variable> fp, BlockNode* bp){
+    name = s; FuncProto = fp; FuncEnvAndBody = bp;
+}
+FunctionNode::~FunctionNode(){
+    delete FuncEnvAndBody;
+}
+void FunctionNode::Translate(int i){
+    for(int j =0; i != j; j++)
+            std::cout << "    ";
+    std::cout << "function " << name << "(";
+    for(auto it = FuncProto.begin() + 1; it != FuncProto.end(); it++){
+        if(it != FuncProto.begin()+1)
+            std::cout<<", ";
+        std::cout << it->name <<" : " << it->type;
+    }
+    std::cout << "): " << FuncProto[0].type << ";" << std::endl;
+    std::cout << "BEGIN" << std::endl;
+    FuncEnvAndBody->getStatmList()->Translate(i+1);
+    std::cout << "END;" << std::endl;
+}
+CallNode::CallNode(std::string s, std::vector<Expr*> ve){
+    name = s; args = ve;
+}
+void CallNode::Translate(int i){
+    for(int j=0; i!=j; j++)
+        std::cout << "    ";
+    std::cout << name << "(";
+    for(auto it = args.begin(); it != args.end(); it++){
+        if(it != args.begin())
+            std::cout << ", ";
+        (*it)->Translate(0);
+    }
+    std::cout << ")";
+    if(i != 0)
+        std::cout << std::endl;
 }
 Var::Var(std::string n, bool rv){
     name = n; rvalue = rv;
@@ -36,7 +81,7 @@ VarInArray::~VarInArray(){
 }
 void VarInArray::Translate(int i){
     std::cout << name << "[";
-    index->Translate(i);
+    index->Translate(0);
     std::cout << "]";
 }
 int IntConst::Val() {
@@ -47,9 +92,9 @@ void IntConst::Translate(int i){
 }
 void BinOp::Translate(int i){
     std::cout << '(';
-    left->Translate(i);
+    left->Translate(0);
     std::cout << ' ' << OpNames[op] << ' ';
-    right->Translate(i);
+    right->Translate(0);
     std::cout << ')';
 }
 BinOp::BinOp(Op op, Expr* l, Expr* r) {
@@ -65,7 +110,7 @@ BinOp::~BinOp() {
 void UnMinus::Translate(int i) {
     std::cout << "(";
     std::cout << "-";
-    expr->Translate(i);
+    expr->Translate(0);
     std::cout << ")";
 }
 UnMinus::UnMinus(Expr *e) {
@@ -85,9 +130,9 @@ void Assign::Translate(int i) {
 //        return;
 //    }
     std::cout << "Assign: ";
-    var->Translate(i);
+    var->Translate(0);
     std::cout << " = ";
-    expr->Translate(i);
+    expr->Translate(0);
     std::cout << std::endl;
 }
 
@@ -104,7 +149,7 @@ void Write::Translate(int i) {
     for(int j =0; i != j; j++)
         std::cout << "    ";
     std::cout << "Write: ";
-    expr->Translate(i);
+    expr->Translate(0);
     std::cout << std::endl;
 }
 Write::Write(Expr *e) {
@@ -118,7 +163,7 @@ void Read::Translate(int i) {
     for(int j =0; i != j; j++)
         std::cout << "    ";
     std::cout << "Read: ";
-    var->Translate(i);
+    var->Translate(0);
     std::cout  << " from stdin." << std::endl;
 }
 Read::Read(Var *v) {
@@ -138,7 +183,7 @@ void If::Translate(int i){
     for(int j = 0; i != j;j++)
         std::cout << "    ";
     std::cout << "IF ";
-    cond->Translate(i);
+    cond->Translate(0);
     std::cout << " THEN:" << std::endl;
     thenstm->Translate(i+1);
     if(elsestm){
@@ -155,7 +200,7 @@ void While::Translate(int i){
     for(int j = 0; i != j; j++)
         std::cout << "    ";
     std::cout << "WHILE ";
-    cond->Translate(i);
+    cond->Translate(0);
     std::cout << " DO:" << std::endl;
     body->Translate(i+1);
 }
@@ -208,4 +253,9 @@ VarInArray* ArrayAccess(std::string id, Expr* index, bool rvalue){
         return nullptr;
     }
     else return new VarInArray(id, rvalue, new BinOp(Sub, index, new IntConst(p->bias)));
+}
+
+CallNode* CallFunc(std::string id, std::vector<Expr*> args){
+    // Function only in Global symbol table, no netsed function.
+    return new CallNode(id, args);
 }

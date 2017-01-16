@@ -171,6 +171,7 @@ Module * module = new Module("Sfe", getGlobalContext());
 Value* writeFormatStr;
 Value* scanfFormatStr;
 BasicBlock* breakTarget;
+bool mainBlock = true;
 static std::map<std::string, AllocaInst*> NamedValues;
 static  AllocaInst* CreateEntryBlockAlloca(Function *TheFunction,
                                         std::string VarName, Value* size) 
@@ -181,7 +182,8 @@ static  AllocaInst* CreateEntryBlockAlloca(Function *TheFunction,
                             VarName.c_str());
 }
 
-void GetVariables(SymbolTableMap* sm, bool re){
+std::map<std::string, AllocaInst*> GetVariables(SymbolTableMap* sm){
+    std::map<std::string, AllocaInst*> oldBindings;
     std::vector<TabElement> vars = VarNames(sm);
     Function *TheFunction = builder.GetInsertBlock()->getParent();
     for(auto it = vars.begin(); it != vars.end(); it++){
@@ -193,16 +195,23 @@ void GetVariables(SymbolTableMap* sm, bool re){
         else if (it->symbol_type == ArrayVar){
             alloc = CreateEntryBlockAlloca(TheFunction, it->var.name, builder.getInt32(it->size));
         }
-        if(!NamedValues[it->var.name])
+        if(!NamedValues[it->var.name]){
             NamedValues[it->var.name] = alloc;
+            oldBindings[it->var.name] = nullptr;
+        } else {
+            oldBindings[it->var.name] = NamedValues[it->var.name];
+            NamedValues[it->var.name] = alloc;
+        }
     }
-    if(re && sm->parentTable){
-        GetVariables(sm->parentTable, re);
-    }
-
+    return oldBindings;
 
 }
-
+void CreateFunctions(){
+    std::vector<TabElement> funs = FunNames(getGlobalSymbolTable());
+    for(auto it = funs.begin(); it != funs.end(); it++){
+        ((FunctionNode*)it->value.ptr)->codegen();
+    }
+}
 int main(int argc, char* argv[])
 {
   if (argc < 2)
@@ -275,11 +284,45 @@ void LogError(const char *Str) {
     std::cout << Str;
     exit(1);
 }
+Value* FunctionNode::codegen(){
+    std::vector<Type*> argTypes(FuncProto.size()-1, Type::getInt32Ty(getGlobalContext()));
+    FunctionType* FT = FunctionType::get(Type::getInt32Ty(getGlobalContext()), argTypes, false);
+    Function *F = Function::Create(FT, Function::ExternalLinkage, name, module);
+    unsigned Idx = 1;
+    for(auto &Arg : F->args()){
+        Arg.setName(FuncProto[Idx++].name);
+    }
+    BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", F);
+    builder.SetInsertPoint(BB);
+    std::map<std::string, AllocaInst*> oldBindings = GetVariables(FuncEnvAndBody->getSymbolTable());
+    for(auto &Arg: F->args()){
+        builder.CreateStore(&Arg,NamedValues[Arg.getName()]);
+    }
+    Value* returnValue = FuncEnvAndBody->codegen();
+    builder.CreateRet(returnValue);
+    return nullptr;
+}
 Value* BlockNode::codegen(){
-    GetVariables(SymbolTable, true);
-    statmList->codegen();
-    Value *V = NamedValues[name];
-    return builder.CreateLoad(V, name.c_str());
+    if(mainBlock){
+        mainBlock = false;
+        GetVariables(SymbolTable);
+        CreateFunctions();
+        Type * returnType = Type::getInt32Ty(getGlobalContext());
+        std::vector<Type*> argTypes;
+        FunctionType *functionType = FunctionType::get(returnType, argTypes, false);
+        Function * function = Function::Create(functionType, Function::ExternalLinkage, "main", module);
+        BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", function);
+        builder.SetInsertPoint(BB);
+        statmList->codegen();
+        Value *V = NamedValues[name];
+        return builder.CreateLoad(V, name.c_str());
+    }
+    else{
+        statmList->codegen();
+        Value *V = NamedValues[name];
+        return builder.CreateLoad(V, name.c_str());
+    }
+     
 }
 Value* Var::codegen() {
     Value *V = NamedValues[name];
@@ -341,7 +384,10 @@ Value* BinOp::codegen() {
             return builder.CreateICmpSLE(L, R, ".ltetmp");
         case Gte:
             return builder.CreateICmpSGE(L, R, ".gtetmp");
-                    
+        case And:
+            return builder.CreateAnd(L, R, ".andtmp");
+        case Or:
+            return builder.CreateOr(L, R, ".ortmp");
         default:
             LogError("Errors in BinOp code genearting! Wrong OP!\n ");
             return nullptr;

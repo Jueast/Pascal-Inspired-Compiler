@@ -5,7 +5,9 @@
 #include <string>
 typedef enum {
     IDENT, INTEGER, PLUS, MINUS, TIMES, DIVIDE, kwMOD,
-    EQ, NEQ, LT, GT, LTE, GTE, LPAR, RPAR, LBRA, RBRA, ASSIGN,
+    EQ, NEQ, LT, GT, LTE, GTE, LPAR,
+    kwAND,kwOR,kwNOT,
+    RPAR, LBRA, RBRA, ASSIGN,
     COMMA, SEMICOLON, COLON, DOT,
     kwPROGRAM, kwFUNCTION, kwVAR, kwCONST, kwBEGIN, kwEND,
     kwINTEGER,

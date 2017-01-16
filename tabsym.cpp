@@ -19,7 +19,7 @@ void TabElement::output(){
     }
     std::cout << stype << " " << var.type 
               << " " << var.name << ": " 
-              << symbol_type == Const ? value.integer : 0 << std::endl;
+              << (symbol_type == Const ? value.integer : 0) << std::endl;
 }
 static SymbolTableMap* CurrentSymbolTable = new SymbolTableMap();
 static SymbolTableMap* GlobalSymbolTable = CurrentSymbolTable;
@@ -91,7 +91,7 @@ void declVar(std::string type, std::string name) {
     (CurrentSymbolTable->table)[name] = t;
 }
 void declArrayVar(std::string type, std::string name, int size, int bias){
-   auto it = CurrentSymbolTable->table.find(name);
+    auto it = CurrentSymbolTable->table.find(name);
     if(it != CurrentSymbolTable->table.end()) {
         error(name, "is declared again.");
         return;
@@ -102,8 +102,23 @@ void declArrayVar(std::string type, std::string name, int size, int bias){
     VariableValue vval;
     TabElement t(ArrayVar, var, vval, size, bias);
     (CurrentSymbolTable->table)[name] = t;
-
 }
+
+void declFunc(std::string FnName, std::string type, void* FunNode){
+    auto it = CurrentSymbolTable->table.find(FnName);
+    if(it != CurrentSymbolTable->table.end()) {
+        error(FnName, "is declared again.");
+        return;
+    }
+    Variable var;
+    var.type = type;
+    var.name = FnName;
+    VariableValue vval;
+    vval.ptr = FunNode;
+    TabElement t(Func, var, vval, 1, 0);
+    (CurrentSymbolTable->table)[FnName] = t;
+}
+
 const TabElement* getTabElement(SymbolTableMap* st, std::string id){
     auto it = st->table.find(id);
     if(it != st->table.end()){
@@ -140,4 +155,13 @@ std::vector<TabElement> VarNames(SymbolTableMap* SymbolTable){
     
     }
     return vars;
+}
+std::vector<TabElement> FunNames(SymbolTableMap* st){
+    std::vector<TabElement> funcs;
+    for(auto it = st->table.begin();
+        it != st->table.end(); it++){
+        if(it->second.symbol_type == Func)
+                funcs.push_back(it->second);
+    }
+    return funcs;
 }

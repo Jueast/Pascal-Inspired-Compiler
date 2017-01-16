@@ -11,6 +11,7 @@ typedef enum {
 const char *symbTable[50] = {
     "IDENT","INTEGER","PLUS","MINUS","TIMES","DIVIDE", "kwMOD",
     "EQ","NEQ","LT","GT","LTE","GTE","LPAR",
+    "kwAND", "kwOR", "kwNOT",
     "RPAR","LBRA","RBRA","ASSIGN","COMMA","SEMICOLON",
     "COLON","DOT","kwPROGRAM","kwFUNCTION","kwVAR","kwCONST",
     "kwBEGIN","kwEND","kwINTEGER","kwIF","kwTHEN","kwELSE",
@@ -65,6 +66,9 @@ const struct {const char* s; LexSymbolType symb;} keyWordTable[] = {
     {"DOWNTO", kwDOWNTO},
     {"BREAK", kwBREAK},
     {"MOD", kwMOD},
+    {"AND", kwAND},
+    {"OR", kwOR},
+    {"NOT", kwNOT},
     {NULL, (LexSymbolType) 0}
 };
 LexSymbolType keyWord(const char* id) {
