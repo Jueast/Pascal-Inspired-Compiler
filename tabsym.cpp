@@ -1,6 +1,7 @@
 #include "tabsym.h"
 #include <string>
 #include <iostream>
+#include <algorithm> 
 #include <vector>
 #include <map>
 void TabElement::output(){
@@ -31,6 +32,7 @@ void setCurrentSymbolTable(SymbolTableMap *s){
 }
 SymbolTableMap* getGlobalSymbolTable() {
     return GlobalSymbolTable;
+
 }
 SymbolTableMap* getCurrentSymbolTable() {
     return CurrentSymbolTable;
@@ -104,7 +106,7 @@ void declArrayVar(std::string type, std::string name, int size, int bias){
     (CurrentSymbolTable->table)[name] = t;
 }
 
-void declFunc(std::string FnName, std::string type, void* FunNode){
+void declFunc(std::string FnName, std::string type, void* FunNode,int ti){
     auto it = CurrentSymbolTable->table.find(FnName);
     if(it != CurrentSymbolTable->table.end()) {
         error(FnName, "is declared again.");
@@ -115,7 +117,7 @@ void declFunc(std::string FnName, std::string type, void* FunNode){
     var.name = FnName;
     VariableValue vval;
     vval.ptr = FunNode;
-    TabElement t(Func, var, vval, 1, 0);
+    TabElement t(Func, var, vval, 1, ti);
     (CurrentSymbolTable->table)[FnName] = t;
 }
 
@@ -156,6 +158,9 @@ std::vector<TabElement> VarNames(SymbolTableMap* SymbolTable){
     }
     return vars;
 }
+bool timeorder(TabElement& a, TabElement& b){
+    return (a.bias < b.bias);
+}
 std::vector<TabElement> FunNames(SymbolTableMap* st){
     std::vector<TabElement> funcs;
     for(auto it = st->table.begin();
@@ -163,5 +168,6 @@ std::vector<TabElement> FunNames(SymbolTableMap* st){
         if(it->second.symbol_type == Func)
                 funcs.push_back(it->second);
     }
+    std::sort(funcs.begin(), funcs.end(), timeorder);
     return funcs;
 }

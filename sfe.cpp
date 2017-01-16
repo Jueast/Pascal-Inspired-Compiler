@@ -171,8 +171,9 @@ Module * module = new Module("Sfe", getGlobalContext());
 Value* writeFormatStr;
 Value* scanfFormatStr;
 BasicBlock* breakTarget;
+BasicBlock *mainBB;
 bool mainBlock = true;
-static std::map<std::string, AllocaInst*> NamedValues;
+static std::map<std::string, Value*> NamedValues;
 static  AllocaInst* CreateEntryBlockAlloca(Function *TheFunction,
                                         std::string VarName, Value* size) 
 {
@@ -181,9 +182,39 @@ static  AllocaInst* CreateEntryBlockAlloca(Function *TheFunction,
   return TmpB.CreateAlloca(Type::getInt32Ty(getGlobalContext()), size,
                             VarName.c_str());
 }
-
-std::map<std::string, AllocaInst*> GetVariables(SymbolTableMap* sm){
-    std::map<std::string, AllocaInst*> oldBindings;
+void GetGlobalVariables(){
+    std::vector<TabElement> vars = VarNames(getGlobalSymbolTable());
+    for(auto it = vars.begin(); it != vars.end();it++){
+        GlobalVariable* gvr;
+        if(it->symbol_type == VarId) {
+            gvr = new llvm::GlobalVariable(*module, 
+                                     Type::getInt32Ty(getGlobalContext()),
+                                     false,
+                                     GlobalValue::CommonLinkage,
+                                     0,
+                                     it->var.name);
+            gvr->setAlignment(4);
+            Constant* init = ConstantInt::get(builder.getInt32Ty(), 0);
+            gvr->setInitializer(init);
+        } else if (it->symbol_type == ArrayVar){
+            ArrayType* att = ArrayType::get(builder.getInt32Ty(), it->size);
+            gvr = new llvm::GlobalVariable(*module,
+                                           att,
+                                           false,
+                                           GlobalValue::ExternalLinkage,
+                                           0,
+                                           it->var.name
+                                        );
+            gvr->setAlignment(4);
+            ConstantAggregateZero* init = ConstantAggregateZero::get(att);
+            gvr->setInitializer(init);
+        }
+        NamedValues[it->var.name] = module->getGlobalVariable(it->var.name);
+        
+    }
+}
+std::map<std::string, Value*> GetVariables(SymbolTableMap* sm){
+    std::map<std::string, Value*> oldBindings;
     std::vector<TabElement> vars = VarNames(sm);
     Function *TheFunction = builder.GetInsertBlock()->getParent();
     for(auto it = vars.begin(); it != vars.end(); it++){
@@ -208,8 +239,12 @@ std::map<std::string, AllocaInst*> GetVariables(SymbolTableMap* sm){
 }
 void CreateFunctions(){
     std::vector<TabElement> funs = FunNames(getGlobalSymbolTable());
+    std::vector<Function*>  llvmFuncs;
     for(auto it = funs.begin(); it != funs.end(); it++){
-        ((FunctionNode*)it->value.ptr)->codegen();
+        llvmFuncs.push_back(((FunctionNode*)it->value.ptr)->decl());
+    }
+    for(unsigned i = 0, e = funs.size(); i != e; i++){
+        ((FunctionNode*)(funs[i].value.ptr))->codegen(llvmFuncs[i]);
     }
 }
 int main(int argc, char* argv[])
@@ -231,10 +266,10 @@ int main(int argc, char* argv[])
   FunctionType *functionType = FunctionType::get(returnType, argTypes, false);
   Function * function = Function::Create(functionType, Function::ExternalLinkage, "main", module);
   
-  BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", function);
-  builder.SetInsertPoint(BB);
-
-  
+  mainBB = BasicBlock::Create(getGlobalContext(), "entry", function);
+  BasicBlock *returnBB = BasicBlock::Create(getGlobalContext(), "return");
+  breakTarget = returnBB;
+  builder.SetInsertPoint(mainBB);  
   char * fileName = argv[1];
   if(!initParser(fileName)) {
          printf("Error creating the syntax analyzer.\n");
@@ -243,8 +278,13 @@ int main(int argc, char* argv[])
   writeFormatStr = builder.CreateGlobalStringPtr("value = %d\n");
   scanfFormatStr = builder.CreateGlobalStringPtr("%d");
   BlockNode* res = Program();
-  Value * returnValue = res->codegen();
-  builder.CreateRet(returnValue);
+  res->codegen();
+  builder.CreateBr(returnBB);
+  function->getBasicBlockList().push_back(returnBB);
+  builder.SetInsertPoint(returnBB);
+  Value* v = builder.CreateLoad(NamedValues[res->name], res->name.c_str());
+  builder.CreateRet(v);
+
 
   if (debug)
   {
@@ -284,7 +324,7 @@ void LogError(const char *Str) {
     std::cout << Str;
     exit(1);
 }
-Value* FunctionNode::codegen(){
+Function* FunctionNode::decl(){
     std::vector<Type*> argTypes(FuncProto.size()-1, Type::getInt32Ty(getGlobalContext()));
     FunctionType* FT = FunctionType::get(Type::getInt32Ty(getGlobalContext()), argTypes, false);
     Function *F = Function::Create(FT, Function::ExternalLinkage, name, module);
@@ -292,40 +332,68 @@ Value* FunctionNode::codegen(){
     for(auto &Arg : F->args()){
         Arg.setName(FuncProto[Idx++].name);
     }
+    return F;
+}
+Value* FunctionNode::codegen(Function* F){
     BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", F);
+    BasicBlock *returnBB = BasicBlock::Create(getGlobalContext(), "return");
+    BasicBlock *previous = breakTarget;
+    breakTarget = returnBB;
     builder.SetInsertPoint(BB);
-    std::map<std::string, AllocaInst*> oldBindings = GetVariables(FuncEnvAndBody->getSymbolTable());
+    std::map<std::string, Value*> oldBindings = GetVariables(FuncEnvAndBody->getSymbolTable());
     for(auto &Arg: F->args()){
         builder.CreateStore(&Arg,NamedValues[Arg.getName()]);
     }
-    Value* returnValue = FuncEnvAndBody->codegen();
-    builder.CreateRet(returnValue);
+    FuncEnvAndBody->codegen();
+    builder.CreateBr(returnBB);
+    F->getBasicBlockList().push_back(returnBB);
+    builder.SetInsertPoint(returnBB);
+    Value *v = builder.CreateLoad(NamedValues[name], name.c_str());
+    builder.CreateRet(v);
+    verifyFunction(*F);
+    breakTarget = previous;
+    for(auto it = oldBindings.begin(); it != oldBindings.end(); it++){
+        NamedValues[it->first] = it->second;
+    }
     return nullptr;
 }
 Value* BlockNode::codegen(){
     if(mainBlock){
         mainBlock = false;
-        GetVariables(SymbolTable);
+        GetGlobalVariables();
         CreateFunctions();
-        Type * returnType = Type::getInt32Ty(getGlobalContext());
-        std::vector<Type*> argTypes;
-        FunctionType *functionType = FunctionType::get(returnType, argTypes, false);
-        Function * function = Function::Create(functionType, Function::ExternalLinkage, "main", module);
-        BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", function);
-        builder.SetInsertPoint(BB);
+        builder.SetInsertPoint(mainBB);
         statmList->codegen();
-        Value *V = NamedValues[name];
-        return builder.CreateLoad(V, name.c_str());
+        return nullptr;
     }
     else{
         statmList->codegen();
-        Value *V = NamedValues[name];
-        return builder.CreateLoad(V, name.c_str());
     }
-     
+    return nullptr;     
+}
+Value* CallNode::codegen(){
+    Function *CalleeF = module->getFunction(name);
+    if(!CalleeF){
+        // module->dump();
+        // this->Translate(0);
+        LogError(( name+ " Unknown Function Referenced!").c_str());
+        return nullptr;
+    }
+    if(CalleeF->arg_size() != args.size()){
+        LogError((name + " Incorrect # arguements passed.").c_str());
+        return nullptr;
+    }
+    std::vector<Value* > ArgsV;
+    for(unsigned i = 0, e = args.size(); i != e; i++){
+        ArgsV.push_back(args[i]->codegen());
+        if(!ArgsV.back())
+            return nullptr;
+    }
+    return builder.CreateCall(CalleeF, ArgsV, name + ".calltmp");
 }
 Value* Var::codegen() {
     Value *V = NamedValues[name];
+    
     if(!V){
         LogError("Unknown variable name");
         return nullptr;
@@ -344,9 +412,15 @@ Value* VarInArray::codegen() {
         return nullptr;
     }
     Value* i = index->codegen();
-    Value* idxList[1] = {i};
-    Value* ptr = builder.CreateGEP(arr, idxList, name.c_str());
-
+    Value* ptr = nullptr;
+    if(module->getNamedGlobal(name)){
+        Value* idxList[2] = {ConstantInt::get(builder.getInt32Ty(),0), i};
+        ptr = builder.CreateGEP(arr, idxList, name.c_str());
+    }
+    else{
+        Value* idxList[1] = {i};
+        ptr = builder.CreateGEP(arr, idxList, name.c_str());
+    }
     if(rvalue){
         return builder.CreateLoad(ptr, (name + "i").c_str()); 
     }

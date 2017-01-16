@@ -1,5 +1,6 @@
 #ifndef LOCAL_SFE_TEST
-#include "llvm/IR/Value.h"  
+#include "llvm/IR/Value.h"
+#include "llvm/IR/Function.h"
 #endif
 #include <vector>
 #include <string>
@@ -49,7 +50,9 @@ public:
     virtual ~FunctionNode();
     virtual void Translate(int i);
 #ifndef LOCAL_SFE_TEST
-    virtual llvm::Value* codegen();
+    virtual llvm::Function* decl();
+    virtual llvm::Value* codegen(){return nullptr;}
+    llvm::Value* codegen(llvm::Function* F);
 #endif
 };
 class CallNode : public Statm, public Expr {

@@ -34,7 +34,7 @@ Expr* TermPrime(Expr*);
 Expr* Factor(void);
 
 LexicalSymbol Symb;
-
+static int t =  0;
 void CompareError(LexSymbolType s) { 
     std::cout << "Error while comparing, expected " << symbTable[s] 
             << " in " << lineNumber << " line."<< std::endl;
@@ -185,7 +185,7 @@ FunctionNode* FunctionMatch(void){
     std::vector<Variable> proto = FunctionHead();
     BlockNode* bn = Block(proto);
     FunctionNode* r = new FunctionNode(proto[0].name, proto, bn);
-    declFunc(proto[0].name, proto[0].type, (void *)r);
+    declFunc(proto[0].name, proto[0].type, (void *)r, t++);
     return r;
 }
 std::vector<Variable> FunctionHead(void){

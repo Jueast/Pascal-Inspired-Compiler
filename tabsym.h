@@ -41,7 +41,7 @@ void declConstInt(std::string, int);
 void declConstFloat(std::string, float);
 void declVar(std::string, std::string);
 void declArrayVar(std::string, std::string, int size, int bias);
-void declFunc(std::string FnName, std::string type, void* FunNode);
+void declFunc(std::string FnName, std::string type, void* FunNode, int t);
 SymbolType checkSymbolType(SymbolTableMap*, std::string, int* v);
 const TabElement* getTabElement(SymbolTableMap*, std::string);
 std::vector<TabElement> VarNames(SymbolTableMap*);
