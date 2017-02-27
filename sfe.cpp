@@ -275,7 +275,7 @@ int main(int argc, char* argv[])
          printf("Error creating the syntax analyzer.\n");
          return 0;
   }
-  writeFormatStr = builder.CreateGlobalStringPtr("value = %d\n");
+  writeFormatStr = builder.CreateGlobalStringPtr("Output:> %d\n");
   scanfFormatStr = builder.CreateGlobalStringPtr("%d");
   BlockNode* res = Program();
   res->codegen();

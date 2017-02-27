@@ -5,4 +5,4 @@ lexan
 *.o
 *.py
 tags
-
+*.sh
